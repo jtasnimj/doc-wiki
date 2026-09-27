@@ -15,7 +15,7 @@ cp .env.example .env
 uv run uvicorn docwiki.app:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
-Open <http://127.0.0.1:8000>. Health and the UI work without a key; ingestion/answering requires one. Normal application requests with a configured key incur provider charges. The generated API schema is at `/openapi.json`; the browser UI needs no CDN or JavaScript build.
+Open <http://127.0.0.1:8000>. Health and the UI work without a key; ingestion/answering requires one. Normal application requests with a configured key incur provider charges. Interactive Swagger API documentation is at `/docs`, with the raw schema at `/openapi.json`. Swagger loads its JavaScript/CSS from jsDelivr; the document-Q&A UI itself needs no CDN or JavaScript build.
 
 Use **one API process per data directory**. A file lock enforces this. The default `data/` stores original uploads, normalized extraction, ready manifests, optional image crops, and Chroma vectors. `.env`, instructions, uploads, indexes, test artifacts, and evaluation runs are ignored by Git; Docker copies only the application and its locked dependencies.
 

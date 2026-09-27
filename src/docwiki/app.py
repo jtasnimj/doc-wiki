@@ -7,7 +7,8 @@ from typing import Literal
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException
@@ -61,13 +62,16 @@ class RequestBounds:
                     [
                         (b"x-request-id", request_id.get().encode()),
                         (b"x-content-type-options", b"nosniff"),
+                    ]
+                )
+                if not any(name == b"content-security-policy" for name, _ in message["headers"]):
+                    message["headers"].append(
                         (
                             b"content-security-policy",
                             b"default-src 'self'; script-src 'self'; style-src 'self'; "
                             b"object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-                        ),
-                    ]
-                )
+                        )
+                    )
             await send(message)
 
         try:
@@ -227,6 +231,29 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
         title="DocWiki", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None
     )
     app.add_middleware(RequestBounds, settings=settings)
+
+    @app.get("/docs", include_in_schema=False)
+    async def api_docs():
+        nonce = uuid.uuid4().hex
+        page = get_swagger_ui_html(
+            openapi_url="/openapi.json",
+            title="DocWiki · API documentation",
+            swagger_favicon_url="/static/favicon.svg",
+            swagger_ui_parameters={"validatorUrl": None, "displayRequestDuration": True},
+        )
+        html = bytes(page.body).decode().replace("<script>", f'<script nonce="{nonce}">')
+        return HTMLResponse(
+            html,
+            headers={
+                "Content-Security-Policy": (
+                    "default-src 'self'; "
+                    f"script-src 'self' https://cdn.jsdelivr.net 'nonce-{nonce}'; "
+                    "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+                    "img-src 'self' data:; object-src 'none'; base-uri 'none'; "
+                    "frame-ancestors 'none'"
+                )
+            },
+        )
 
     @app.exception_handler(AppError)
     async def known_error(request, exc):
