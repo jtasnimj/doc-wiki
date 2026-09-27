@@ -1,4 +1,5 @@
 import json
+import math
 from typing import Any
 
 from docwiki.config import Settings
@@ -46,6 +47,8 @@ def parse_json(raw: bytes, settings: Settings) -> Any:
     stack, count = [value], 0
     while stack:
         item = stack.pop()
+        if isinstance(item, float) and not math.isfinite(item):
+            raise AppError("invalid_json", "JSON numbers must be finite.")
         count += 1
         if count > settings.json_nodes:
             raise AppError("json_nodes", "JSON contains too many values.")
@@ -61,6 +64,7 @@ def extract_json(raw: bytes, settings: Settings) -> Extraction:
     if not isinstance(value, (dict, list)):
         raise AppError("json_source_shape", "A source document must be a JSON object or array.")
     blocks: list[SourceBlock] = []
+    total_bytes = 0
 
     def informative(item):
         if isinstance(item, dict):
@@ -70,6 +74,7 @@ def extract_json(raw: bytes, settings: Settings) -> Extraction:
         return item is not None and (not isinstance(item, str) or bool(item.strip()))
 
     def visit(item, path, context):
+        nonlocal total_bytes
         rendered = json.dumps(item, ensure_ascii=False, indent=2, allow_nan=False)
         if isinstance(item, list):
             for i, child in enumerate(item):
@@ -81,9 +86,13 @@ def extract_json(raw: bytes, settings: Settings) -> Extraction:
                 child_path = f"{path}[{json.dumps(key, ensure_ascii=False)}]"
                 visit(child, child_path, (context + "\nParent fields: " + label)[-2000:])
         else:
+            text = f"Path: {path}\n{context}\n{rendered}"
+            total_bytes += len(text.encode())
+            if total_bytes > settings.extracted_bytes or len(blocks) >= settings.chunk_limit:
+                raise AppError("extracted_limit", "Normalized source exceeds the configured limit.")
             blocks.append(
                 SourceBlock(
-                    text=f"Path: {path}\n{context}\n{rendered}",
+                    text=text,
                     kind="json",
                     location=Location(json_path=path),
                     method="json-record",

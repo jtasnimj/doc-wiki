@@ -31,13 +31,17 @@ class PDFExtractor:
                             stderr=asyncio.subprocess.DEVNULL,
                         )
                         await process.wait()
-                        if process.returncode != 0 or not output.exists():
-                            raise AppError("parser_failed", "PDF extraction failed.", 422)
-                        if output.stat().st_size > self.settings.extracted_bytes * 5:
-                            raise AppError(
-                                "extracted_limit", "PDF extraction exceeded the size limit."
-                            )
-                        value = json.loads(output.read_text())
+
+                        def read_result():
+                            if process.returncode != 0 or not output.exists():
+                                raise AppError("parser_failed", "PDF extraction failed.", 422)
+                            if output.stat().st_size > self.settings.extracted_bytes * 5:
+                                raise AppError(
+                                    "extracted_limit", "PDF extraction exceeded the size limit."
+                                )
+                            return json.loads(output.read_text())
+
+                        value = await asyncio.to_thread(read_result)
                     finally:
                         if process is not None and process.returncode is None:
 

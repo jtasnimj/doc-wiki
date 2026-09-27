@@ -223,7 +223,9 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
         finally:
             await service.close()
 
-    app = FastAPI(title="DocWiki", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="DocWiki", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None
+    )
     app.add_middleware(RequestBounds, settings=settings)
 
     @app.exception_handler(AppError)

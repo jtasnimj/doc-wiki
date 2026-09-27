@@ -40,8 +40,9 @@ class Provider(Protocol):
 
 
 class OpenAIProvider:
-    def __init__(self, settings: Settings, client: Any = None):
+    def __init__(self, settings: Settings, client: Any = None, *, record_usage: bool = False):
         self.settings = settings
+        self.record_usage = record_usage
         self.configured = settings.openai_api_key is not None or client is not None
         self.client: Any = client or openai.AsyncOpenAI(
             api_key=settings.openai_api_key.get_secret_value()
@@ -52,6 +53,7 @@ class OpenAIProvider:
         )
         self.gate = asyncio.Semaphore(settings.provider_concurrency)
         self.quota_exhausted = False
+        self.usage_records: list[dict] = []
 
     async def call(self, operation: str, model: str, fn: Callable[[], Awaitable[Any]]) -> Any:
         if not self.configured:
@@ -70,6 +72,14 @@ class OpenAIProvider:
                     async with asyncio.timeout(self.settings.provider_timeout):
                         result = await fn()
                 usage = getattr(result, "usage", None)
+                if self.record_usage:
+                    self.usage_records.append(
+                        {
+                            "operation": operation,
+                            "model": model,
+                            "usage": usage.model_dump() if usage else None,
+                        }
+                    )
                 event(
                     "provider_complete",
                     operation=operation,
@@ -150,7 +160,7 @@ class OpenAIProvider:
             content.append(
                 {
                     "type": "input_image",
-                    "image_url": image_url(Path(source.image_ref)),
+                    "image_url": await asyncio.to_thread(image_url, Path(source.image_ref)),
                     "detail": "high",
                 }
             )
@@ -176,6 +186,7 @@ class OpenAIProvider:
         return ModelAnswer.model_validate(response.output_parsed)
 
     async def describe(self, image: Path) -> str:
+        url = await asyncio.to_thread(image_url, image)
         response = await self.call(
             "vision",
             self.settings.generation_model,
@@ -195,9 +206,7 @@ class OpenAIProvider:
                     },
                     {
                         "role": "user",
-                        "content": [
-                            {"type": "input_image", "image_url": image_url(image), "detail": "high"}
-                        ],
+                        "content": [{"type": "input_image", "image_url": url, "detail": "high"}],
                     },
                 ],
             ),

@@ -17,7 +17,7 @@ for x, y, text in [
     (60, 145, "CC1"),
     (190, 145, "Approved"),
 ]:
-    page.insert_text((x, y), text)
+    page.insert_text((x, y), text, fontname="hebo" if y == 105 else "helv")
 page = doc.new_page()
 page.insert_text((50, 60), "Second page. Hosting provider: ExampleCloud. Region: west.")
 doc.save(sys.argv[1])

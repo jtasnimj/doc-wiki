@@ -7,6 +7,7 @@ import pytest
 
 from docwiki.app import create_app
 from docwiki.config import Settings
+from docwiki.contracts import ModelAnswer
 from tests.fakes import FakeProvider
 
 
@@ -84,3 +85,58 @@ async def test_invalid_questions_fail_before_any_provider_work(client, questions
     )
     assert response.status_code == 422
     assert provider.embedding_calls == provider.answer_calls == 0
+
+
+async def test_batch_statuses_invalid_citations_and_all_failed_still_http_200(tmp_path):
+    class StatusProvider(FakeProvider):
+        async def answer(self, question, evidence, warnings):
+            if question == "partial":
+                return ModelAnswer(
+                    status="partial",
+                    answer="ExampleCloud; region is not documented.",
+                    source_ids=[evidence[0].source_id],
+                )
+            if question == "missing":
+                return ModelAnswer(status="not_found", answer="Not found.", source_ids=[])
+            if question == "invalid":
+                return ModelAnswer(status="answered", answer="Fabricated.", source_ids=["forged"])
+            return await super().answer(question, evidence, warnings)
+
+    app = create_app(Settings(data_dir=tmp_path, embedding_dimensions=64), StatusProvider())
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/api/qa",
+                files={
+                    "document_file": (
+                        "source.json",
+                        b'{"cloud":"ExampleCloud"}',
+                        "application/json",
+                    ),
+                    "questions_file": (
+                        "q.json",
+                        b'["cloud","partial","missing","invalid"]',
+                        "application/json",
+                    ),
+                },
+            )
+            assert response.status_code == 200, response.text
+            data = response.json()
+            assert [r["status"] for r in data["results"]] == [
+                "answered",
+                "partial",
+                "not_found",
+                "error",
+            ]
+            assert data["results"][2]["answer"] == "Not found in the provided document."
+            assert data["results"][2]["citations"] == []
+            assert data["results"][3]["answer"] is None
+            assert data["results"][3]["error"]["code"] == "invalid_model_output"
+            assert data["batch_status"] == "partial_failure"
+            failed = await client.post(
+                f"/api/documents/{data['document_id']}/questions", json={"questions": ["invalid"]}
+            )
+            assert failed.status_code == 200
+            assert failed.json()["batch_status"] == "failed"

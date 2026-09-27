@@ -1,12 +1,32 @@
 """Process-only PyMuPDF adapter. No imports from API, providers or vector storage."""
 
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any
 
 import pymupdf
+
+
+def distinct_header_style(first, second, text_blocks) -> bool:
+    """Only remove an internal header when typography distinguishes it from data."""
+
+    def styles(rect):
+        found = set()
+        for block in text_blocks:
+            for line in block.get("lines", []):
+                for span in line["spans"]:
+                    box = pymupdf.Rect(span["bbox"])
+                    if (box.tl + box.br) / 2 in pymupdf.Rect(rect):
+                        found.add((bool(span["flags"] & 16), span["color"]))
+        return found
+
+    top, body = styles(first), styles(second)
+    if not top or not body:
+        return False
+    return (any(bold for bold, _ in top) and not any(bold for bold, _ in body)) or (
+        {color for _, color in top}.isdisjoint({color for _, color in body})
+    )
 
 
 def extract(path: str, options: dict) -> dict:
@@ -24,43 +44,37 @@ def extract(path: str, options: dict) -> dict:
                 image_pages.setdefault(img[0], set()).add(page.number)
         for page in doc:
             page_blocks: list[dict[str, Any]] = []
+            text_blocks = page.get_text("dict", flags=pymupdf.TEXTFLAGS_TEXT, sort=True)["blocks"]
             drawings = [
                 d for d in page.get_drawings() if d["rect"].get_area() < page.rect.get_area() * 0.85
             ]
             tables = page.find_tables(paths=drawings).tables
-            rects = [pymupdf.Rect(t.bbox) for t in tables]
+            rects = []
             for table in tables:
                 rows = [[cell or "" for cell in row] for row in table.extract()]
                 names = table.header.names
                 plausible = all(name and len(name) < 80 and name.count("\n") <= 2 for name in names)
-                headers = (
-                    list(names) if plausible else [f"Column {i + 1}" for i in range(len(names))]
-                )
-                if (
-                    rows
-                    and not plausible
-                    and table.header.external
-                    and all(cell.strip() and len(cell) < 80 for cell in rows[0])
-                ):
-                    headers, rows = rows[0], rows[1:]
-                elif rows and plausible and not table.header.external:
-                    rows = rows[1:]
-                elif not plausible:
-                    header_index = next(
-                        (
-                            i
-                            for i, row in enumerate(rows[:2])
-                            if all(cell.strip() and len(cell) < 80 for cell in row)
-                            and not re.search(r"\d", row[0])
-                        ),
-                        None,
+                reliable = plausible and (
+                    table.header.external
+                    or (
+                        len(rows) > 1
+                        and distinct_header_style(
+                            table.rows[0].bbox, table.rows[1].bbox, text_blocks
+                        )
                     )
-                    if header_index is not None:
-                        headers, rows = rows[header_index], rows[header_index + 1 :]
-                    else:
-                        unknown_headers.append(page.number + 1)
+                )
+                headers = (
+                    list(names) if reliable else [f"Column {i + 1}" for i in range(len(names))]
+                )
+                if reliable and not table.header.external:
+                    rows = rows[1:]
+                elif not reliable:
+                    # Continuation pages often start with short data that looks like a
+                    # header. Preserve every row unless there is positive header evidence.
+                    unknown_headers.append(page.number + 1)
                 if not rows:
                     continue
+                rects.append(pymupdf.Rect(table.bbox))
                 page_blocks.append(
                     dict(
                         text="\n".join(" | ".join(row) for row in [headers, *rows]),
@@ -71,7 +85,7 @@ def extract(path: str, options: dict) -> dict:
                         rows=rows,
                     )
                 )
-            for block in page.get_text("dict", flags=pymupdf.TEXTFLAGS_TEXT, sort=True)["blocks"]:
+            for block in text_blocks:
                 if block["type"] != 0:
                     continue
                 lines = []

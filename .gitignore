@@ -14,6 +14,7 @@ __pycache__/
 data/
 .data.lock
 evaluation/runs/
+artifacts/
 instructions/
 dist/
 build/

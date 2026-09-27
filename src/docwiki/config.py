@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,3 +35,10 @@ class Settings(BaseSettings):
     vision_enabled: bool = False
     vision_crops: int = Field(3, ge=1, le=3)
     answer_images: int = Field(2, ge=1, le=2)
+
+    @field_validator("openai_api_key", mode="before")
+    @classmethod
+    def empty_key_is_unconfigured(cls, value):
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value

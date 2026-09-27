@@ -24,7 +24,7 @@ from docwiki.json_source import extract_json
 from docwiki.observability import event
 from docwiki.pdf import PDFExtractor
 from docwiki.providers import Provider
-from docwiki.retrieval import IndexStore, make_nodes
+from docwiki.retrieval import PARSER_VERSION, IndexStore, make_nodes
 
 
 def storage_lock(root: Path) -> FileLock:
@@ -149,7 +149,7 @@ class QAService:
                     "ingestion",
                     document_id=doc_id,
                     parser="pymupdf" if source_type == "pdf" else "json",
-                    extraction_method="page-blocks-v1" if source_type == "pdf" else "json-record",
+                    extraction_method=PARSER_VERSION if source_type == "pdf" else "json-record",
                     page_count=info.page_count,
                     chunk_count=info.chunk_count,
                     skipped_pages=len(extraction.skipped_pages),
@@ -206,13 +206,19 @@ class QAService:
             raise AppError(
                 "document_not_found", "No ready index exists for this document/configuration.", 404
             )
-        unique = {q.question: q for q in reversed(questions)}
+        unique: dict[str, Question] = {}
+        for question in questions:
+            unique.setdefault(question.question, question)
 
         async def one(question: Question):
             try:
                 embedding = await self.store.embedder.aget_query_embedding(question.question)
                 evidence = await self.store.run(
-                    self.store.retrieve, doc_id, question.question, embedding
+                    self.store.retrieve,
+                    doc_id,
+                    question.question,
+                    embedding,
+                    finish_on_cancel=False,
                 )
                 if not evidence:
                     return Result(

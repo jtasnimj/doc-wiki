@@ -25,7 +25,7 @@ from docwiki.errors import AppError
 from docwiki.providers import Provider
 from docwiki.tokens import tokens
 
-PARSER_VERSION = "page-blocks-v1"
+PARSER_VERSION = "page-blocks-v2"
 CHUNKER_VERSION = "structure-v1"
 
 
@@ -156,14 +156,17 @@ class IndexStore:
         self.client: ClientAPI
         self.signature = fingerprint(settings, provider)
 
-    async def run(self, fn, *args):
+    async def run(self, fn, *args, finish_on_cancel=True):
         ctx = contextvars.copy_context()
         future = asyncio.get_running_loop().run_in_executor(self.executor, ctx.run, fn, *args)
         try:
             return await asyncio.shield(future)
         except asyncio.CancelledError:
-            # Local mutations finish before callers attempt cleanup; no deletion race.
-            await future
+            if finish_on_cancel:
+                # Mutations finish before cleanup; reads must not delay partial responses.
+                await future
+            else:
+                future.cancel()
             raise
 
     async def start(self):
@@ -261,5 +264,5 @@ class IndexStore:
     async def close(self):
         if hasattr(self, "client"):
             # Chroma 1.5 exposes close on the concrete client, ahead of ClientAPI's typing.
-            await self.run(getattr(self.client, "close"))
+            await self.run(self.client.close)  # type: ignore[attr-defined]
         await asyncio.to_thread(self.executor.shutdown, wait=True)
