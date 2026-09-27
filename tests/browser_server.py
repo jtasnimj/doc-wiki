@@ -17,7 +17,24 @@ class BrowserProvider(FakeProvider):
     async def answer(self, question, evidence, warnings):
         await asyncio.sleep(0.15)
         if question == "Missing fact?":
-            return ModelAnswer(status="not_found", answer="Not found.", source_ids=[])
+            return ModelAnswer(
+                status="not_found", answer="The document does not specify a region.", source_ids=[]
+            )
+        if question == "Related fact?":
+            return ModelAnswer.model_validate(
+                {
+                    "status": "not_found",
+                    "answer": "The document does not specify a region.",
+                    "source_ids": [],
+                    "related_information": [
+                        {
+                            "text": "<img src=x onerror=window.docwikiPwned=true> "
+                            "ExampleCloud hosts the service.",
+                            "source_ids": [evidence[0].source_id],
+                        }
+                    ],
+                }
+            )
         if question == "Partial fact?":
             return ModelAnswer(
                 status="partial",

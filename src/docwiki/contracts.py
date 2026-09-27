@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 from docwiki.config import Settings
 from docwiki.errors import AppError
@@ -98,11 +98,23 @@ class Citation(BaseModel):
     derived: bool = False
 
 
+class ModelRelatedInformation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=400)
+    source_ids: list[str] = Field(min_length=1, max_length=2)
+
+
 class ModelAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid")
     answer: str
     status: Literal["answered", "partial", "not_found"]
     source_ids: list[str]
+    related_information: list[ModelRelatedInformation] = Field(default_factory=list, max_length=2)
+
+
+class RelatedInformation(BaseModel):
+    text: str = Field(min_length=1, max_length=400)
+    citations: list[Citation] = Field(min_length=1, max_length=2)
 
 
 class ResultError(BaseModel):
@@ -120,6 +132,14 @@ class Result(Question):
     status: Literal["answered", "partial", "not_found", "error"]
     citations: list[Citation] = Field(default_factory=list)
     error: ResultError | None = None
+    related_information: list[RelatedInformation] = Field(default_factory=list, max_length=2)
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        result = handler(self)
+        if not self.related_information:
+            result.pop("related_information", None)
+        return result
 
 
 class DocumentInfo(BaseModel):

@@ -34,7 +34,7 @@ All 18 cases ran locally with no skipped sources. The final run used parser `pag
 
 The fake retriever missed development cases 01, 02, 03, 05, and 06; the required evidence was present in extraction. These diagnose the fake retrieval stage. They do not establish the behavior of `text-embedding-3-small`, and no BM25/reranker/stitching change was justified from them. Fake generation is deliberately a stub, so publishing its apparent answer accuracy would be misleading.
 
-On this local run, the first sample-PDF case including ingestion took 6,060 ms; subsequent cached cases took 2–13 ms, and first synthetic-PDF ingestion took 109 ms. These use fake providers on one machine, with no network latency, and are not production performance claims. Per-case latency is in the committed result artifact. Actual OpenAI token usage and semantic answer quality remain unmeasured.
+On this local run, the first sample-PDF case including ingestion took 6,060 ms; subsequent cached cases took 2–13 ms, and first synthetic-PDF ingestion took 109 ms. These use fake providers on one machine, with no network latency, and are not production performance claims. Per-case latency is in the committed result artifact. This original 18-case suite has not had a paid run. The separate [19-question workbook baseline](workbook-review.md) records actual OpenAI usage and reviewed failures; its post-change live retest is pending.
 
 ## Figure gate
 

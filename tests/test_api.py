@@ -291,7 +291,7 @@ async def test_batch_statuses_invalid_citations_and_all_failed_still_http_200(tm
                 "not_found",
                 "error",
             ]
-            assert data["results"][2]["answer"] == "Not found in the provided document."
+            assert data["results"][2]["answer"] == "Not found."
             assert data["results"][2]["citations"] == []
             assert data["results"][3]["answer"] is None
             assert data["results"][3]["error"]["code"] == "invalid_model_output"

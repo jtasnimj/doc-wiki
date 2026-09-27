@@ -16,6 +16,7 @@ from docwiki.contracts import (
     Extraction,
     ModelAnswer,
     Question,
+    RelatedInformation,
     Result,
     ResultError,
 )
@@ -36,21 +37,20 @@ def storage_lock(root: Path) -> FileLock:
 def validate_answer(question: Question, answer: ModelAnswer, evidence: list[Evidence]) -> Result:
     allowed = {item.source_id: item for item in evidence}
     ids = list(dict.fromkeys(answer.source_ids))
+    related_ids = [ident for item in answer.related_information for ident in item.source_ids]
     invalid = (
         not answer.answer.strip()
-        or any(ident not in allowed for ident in ids)
+        or any(ident not in allowed for ident in [*ids, *related_ids])
         or (answer.status == "not_found" and bool(ids))
         or (answer.status != "not_found" and not ids)
+        or (answer.status != "not_found" and bool(answer.related_information))
+        or any(not item.text.strip() for item in answer.related_information)
     )
     if invalid:
         raise AppError("invalid_model_output", "Answer or citations failed validation.", 502)
-    return Result(
-        **question.model_dump(),
-        answer="Not found in the provided document."
-        if answer.status == "not_found"
-        else answer.answer,
-        status=answer.status,
-        citations=[
+
+    def citations(source_ids: list[str]) -> list[Citation]:
+        return [
             Citation(
                 source_id=ident,
                 kind=allowed[ident].kind,
@@ -58,7 +58,17 @@ def validate_answer(question: Question, answer: ModelAnswer, evidence: list[Evid
                 excerpt=allowed[ident].text,
                 derived=allowed[ident].kind == "vision",
             )
-            for ident in ids
+            for ident in dict.fromkeys(source_ids)
+        ]
+
+    return Result(
+        **question.model_dump(),
+        answer=answer.answer,
+        status=answer.status,
+        citations=citations(ids),
+        related_information=[
+            RelatedInformation(text=item.text, citations=citations(item.source_ids))
+            for item in answer.related_information
         ],
     )
 

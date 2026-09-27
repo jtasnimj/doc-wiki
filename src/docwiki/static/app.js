@@ -33,6 +33,19 @@ function clearResults() {
   controls();
 }
 
+function renderCitations(parent, citations) {
+  for (const [index, source] of citations.entries()) {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    const locations = source.locations.map(loc => loc.page ? `PDF page ${loc.page}` : `JSON ${loc.json_path}`).join(", ");
+    summary.textContent = `Source ${index + 1} · ${locations}${source.derived ? " · Derived visual description" : ""}`;
+    const excerpt = document.createElement("pre");
+    excerpt.textContent = source.excerpt;
+    details.append(summary, excerpt);
+    parent.append(details);
+  }
+}
+
 function render(data) {
   lastResponse = data;
   warnings(data.warnings || []);
@@ -59,15 +72,26 @@ function render(data) {
     answer.className = "answer";
     answer.textContent = item.answer ?? item.error?.message ?? "Unable to answer.";
     article.append(top, heading, answer);
-    for (const [citationIndex, source] of item.citations.entries()) {
-      const details = document.createElement("details");
-      const summary = document.createElement("summary");
-      const locations = source.locations.map(loc => loc.page ? `PDF page ${loc.page}` : `JSON ${loc.json_path}`).join(", ");
-      summary.textContent = `Source ${citationIndex + 1} · ${locations}${source.derived ? " · Derived visual description" : ""}`;
-      const excerpt = document.createElement("pre");
-      excerpt.textContent = source.excerpt;
-      details.append(summary, excerpt);
-      article.append(details);
+    renderCitations(article, item.citations);
+    if (item.related_information?.length) {
+      const section = document.createElement("section");
+      section.className = "related-information";
+      const title = document.createElement("h4");
+      title.textContent = "Related information";
+      const note = document.createElement("p");
+      note.className = "hint";
+      note.textContent = "These facts do not establish the requested answer.";
+      section.append(title, note);
+      for (const related of item.related_information) {
+        const fact = document.createElement("div");
+        const text = document.createElement("p");
+        text.className = "answer";
+        text.textContent = related.text;
+        fact.append(text);
+        renderCitations(fact, related.citations);
+        section.append(fact);
+      }
+      article.append(section);
     }
     $("results").append(article);
   }

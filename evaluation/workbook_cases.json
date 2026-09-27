@@ -1,0 +1,710 @@
+{
+  "source_sha256": "7d1fa9b6efbaeeb6f30d1af720a806e9061a60cbd6896d0e3620e8a78ede6003",
+  "workbook_sha256": "a09ba7eaa94d031aad206749bf669c92df334e5d3450eeaad04ff03e7e85e772",
+  "baseline_commit": "10caac8",
+  "cases": [
+    {
+      "case": 1,
+      "workbook_row": 2,
+      "split": "dev",
+      "question_sha256": "374a8dde07a1a3b08862c61c13d61cf0b1ed7a0f30ba29f27ce1913ac19f4d9c",
+      "topic": "Data-centre location",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        16,
+        17,
+        22
+      ],
+      "source_supported_target": "GCP hosting is supported; geography and USA-only residency are not established.",
+      "reference_alignment": "Contradicts the affirmative geographic reference appropriately.",
+      "baseline_claim_review": "No unsupported factual claim, but no useful explanation.",
+      "retrieval_review": "Relevant provider evidence retrieved; geographic commitment absent.",
+      "diagnoses": [
+        "unsupported_reference",
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Explain the missing region/residency. Optionally cite hosting separately.",
+      "regression_pattern": "location_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 2,
+      "workbook_row": 3,
+      "split": "dev",
+      "question_sha256": "bf3be0c877d75d13255525017d8aa347ddd6c7d0886d2a905d0727ec1d0668c1",
+      "topic": "Unauthorized installation",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        69
+      ],
+      "source_supported_target": "Installation approval, whitelisting and blacklisting are not established. Antimalware is related.",
+      "reference_alignment": "Agrees on Yes but substitutes different controls.",
+      "baseline_claim_review": "Overclaims installation restrictions from a SOC criterion and antimalware/patching.",
+      "retrieval_review": "Relevant antimalware table extracted and retrieved; criterion is not proof of the requested implementation.",
+      "diagnoses": [
+        "unsupported_reference",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Distinguish criteria from implemented controls; abstain on the installation mechanism.",
+      "regression_pattern": "criterion_vs_control",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 3,
+      "workbook_row": 4,
+      "split": "dev",
+      "question_sha256": "72f0973ea71e8b17a205aa90184d7260464c25a28b022ee3948e0c129d9a24cd",
+      "topic": "Continuity documentation audience",
+      "expected_status": "answered",
+      "reference_support": "broadly_supported",
+      "evidence_pages": [
+        20,
+        31,
+        38,
+        78,
+        82
+      ],
+      "source_supported_target": "Combine continuity plans with policy accessibility to employees, contractors and appropriate third parties.",
+      "reference_alignment": "Broad agreement, but the scope of authorized audiences needs qualification.",
+      "baseline_claim_review": "Availability is asserted without retrieval of the policy-access evidence.",
+      "retrieval_review": "Plans retrieved repeatedly; policy-access evidence on pages 31/38 missing from top six.",
+      "diagnoses": [
+        "retrieval_miss",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Require support for both existence and accessibility; inspect duplicate plan passages before any retrieval change.",
+      "regression_pattern": "audience_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            78,
+            82
+          ],
+          "contains": [
+            "business continuity",
+            "respond"
+          ]
+        },
+        {
+          "pages": [
+            31,
+            38
+          ],
+          "contains": [
+            "policies",
+            "accessible",
+            "third parties"
+          ]
+        }
+      ]
+    },
+    {
+      "case": 4,
+      "workbook_row": 5,
+      "split": "dev",
+      "question_sha256": "55ac7893136e7be43a29fe0184b953a76d06d4cdffbe082525b33b4fb311a0c3",
+      "topic": "Private-key purpose and secrecy",
+      "expected_status": "partial",
+      "reference_support": "qualified",
+      "evidence_pages": [
+        22,
+        23,
+        58
+      ],
+      "source_supported_target": "Key lifecycle management and confidentiality are documented; unique-purpose provisioning is not established.",
+      "reference_alignment": "Over-agrees with the reference unique-purpose claim.",
+      "baseline_claim_review": "Copies unique-purpose qualifier from the question without evidence.",
+      "retrieval_review": "Key lifecycle and confidentiality context retrieved; exact secret-key classification spans pages 22/23.",
+      "diagnoses": [
+        "unsupported_reference",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Cover independent subparts; retain supported lifecycle/confidentiality and explicitly identify missing unique-purpose provisioning.",
+      "regression_pattern": "purpose_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            58
+          ],
+          "contains": [
+            "key management",
+            "rotation"
+          ]
+        },
+        {
+          "pages": [
+            22
+          ],
+          "contains": [
+            "confidential",
+            "highly sensitive"
+          ]
+        },
+        {
+          "pages": [
+            23
+          ],
+          "contains": [
+            "secret and private keys"
+          ]
+        }
+      ]
+    },
+    {
+      "case": 5,
+      "workbook_row": 6,
+      "split": "dev",
+      "question_sha256": "00b814763c2e769b26fd6da403550d2e8a24bcd309b8dc217fd170b659b6c97a",
+      "topic": "Environmental controls",
+      "expected_status": "partial",
+      "reference_support": "qualified",
+      "evidence_pages": [
+        26,
+        27
+      ],
+      "source_supported_target": "Report describes expected GCP environmental responsibilities; supplier controls are carved out. Humidity thresholds and test outcomes are not established.",
+      "reference_alignment": "Over-agrees with the reference implementation claim.",
+      "baseline_claim_review": "Expected supplier responsibilities become implemented/tested temperature and humidity controls.",
+      "retrieval_review": "Responsibility rows retrieved; adjacent carve-out framing is missing.",
+      "diagnoses": [
+        "unsupported_reference",
+        "retrieval_miss",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Preserve supplier expectations and audit scope; never infer test outcomes. Inspect table context retention in a later controlled experiment.",
+      "regression_pattern": "supplier_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            26
+          ],
+          "contains": [
+            "environmental monitoring"
+          ]
+        },
+        {
+          "pages": [
+            27
+          ],
+          "contains": [
+            "maintenance",
+            "environmental"
+          ]
+        },
+        {
+          "pages": [
+            26
+          ],
+          "contains": [
+            "carved out",
+            "expected"
+          ]
+        }
+      ]
+    },
+    {
+      "case": 6,
+      "workbook_row": 7,
+      "split": "dev",
+      "question_sha256": "f64e91e9b11ec71c2e8b1e5055b3c5aa6516a7a50b1e8b6818ab61b7129c3706",
+      "topic": "Secure network protocols",
+      "expected_status": "answered",
+      "reference_support": "broadly_supported",
+      "evidence_pages": [
+        16,
+        24,
+        66,
+        67
+      ],
+      "source_supported_target": "Describe SSH, TLS 1.2 or above, HTTPS and encrypted transmission with their stated scope.",
+      "reference_alignment": "Agrees on Yes; lacks the concrete protocol evidence.",
+      "baseline_claim_review": "Generic encryption supports a narrower statement than the claimed management/import/export scope.",
+      "retrieval_review": "Encryption retrieved; protocol passages on pages 16/24 missed.",
+      "diagnoses": [
+        "retrieval_miss",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Require protocol-specific evidence and scope; evaluate coverage of protocol passages before changing retrieval.",
+      "regression_pattern": "protocol_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            16
+          ],
+          "contains": [
+            "SSH",
+            "TLS",
+            "1.2"
+          ]
+        },
+        {
+          "pages": [
+            24
+          ],
+          "contains": [
+            "HTTPS"
+          ]
+        },
+        {
+          "pages": [
+            65,
+            66
+          ],
+          "contains": [
+            "data in transit",
+            "encrypted"
+          ]
+        }
+      ]
+    },
+    {
+      "case": 7,
+      "workbook_row": 8,
+      "split": "dev",
+      "question_sha256": "e034f74cfeac79d1b9cc7eebd6123cbd09d533ef9f49f90c3091d302da4bc2fb",
+      "topic": "Infrastructure policy lifecycle",
+      "expected_status": "partial",
+      "reference_support": "qualified",
+      "evidence_pages": [
+        16,
+        17,
+        32,
+        68
+      ],
+      "source_supported_target": "General infrastructure controls and policy review are supported; every virtualization-specific lifecycle requirement is not established.",
+      "reference_alignment": "Over-agrees with the reference full lifecycle assertion.",
+      "baseline_claim_review": "General policy existence and annual review become every requested lifecycle verb for virtualization.",
+      "retrieval_review": "Generic policies retrieved, including a standalone heading; no complete virtualization lifecycle.",
+      "diagnoses": [
+        "unsupported_reference",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Assess each requested subpart and system scope. Do not promote a policy list into its detailed contents.",
+      "regression_pattern": "lifecycle_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            17
+          ],
+          "contains": [
+            "infrastructure",
+            "maintenance"
+          ]
+        },
+        {
+          "pages": [
+            19,
+            32
+          ],
+          "contains": [
+            "review",
+            "annually"
+          ]
+        }
+      ]
+    },
+    {
+      "case": 8,
+      "workbook_row": 9,
+      "split": "dev",
+      "question_sha256": "258cade44348c8eeaada241dc69b61429c75ce616626990827530d4a28791083",
+      "topic": "Annual policy review and update",
+      "expected_status": "partial",
+      "reference_support": "qualified",
+      "evidence_pages": [
+        19,
+        20,
+        32,
+        69
+      ],
+      "source_supported_target": "Annual review is documented; updates occur as needed. Separate malware-policy review frequency is not established.",
+      "reference_alignment": "Over-agrees that both policies must change annually.",
+      "baseline_claim_review": "Conflates review frequency with mandatory updates and leaks raw source IDs into prose.",
+      "retrieval_review": "Annual review retrieved; page 32 as-needed policy updates missing.",
+      "diagnoses": [
+        "unsupported_reference",
+        "retrieval_miss",
+        "answer_generation_error",
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Separate review from updates and policy scopes; keep IDs only in citation fields.",
+      "regression_pattern": "review_vs_update",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            19,
+            32
+          ],
+          "contains": [
+            "review",
+            "annually"
+          ]
+        },
+        {
+          "pages": [
+            32
+          ],
+          "contains": [
+            "updates",
+            "deemed necessary"
+          ]
+        },
+        {
+          "pages": [
+            20,
+            56
+          ],
+          "contains": [
+            "asset management policy"
+          ]
+        }
+      ]
+    },
+    {
+      "case": 9,
+      "workbook_row": 10,
+      "split": "dev",
+      "question_sha256": "dc2093bef787c1f91240fc50ace844ee8d814a941abe1ca8bf47d415bda4c7da",
+      "topic": "Transport-container protection",
+      "expected_status": "not_found",
+      "reference_support": "supported_abstention",
+      "evidence_pages": [],
+      "source_supported_target": "Physical transport-container protection is not documented; omit transport-encryption and cloud-hosting facts.",
+      "reference_alignment": "Matches the reference abstention.",
+      "baseline_claim_review": "Correct abstention with generic presentation.",
+      "retrieval_review": "Only lexical transport/encryption matches; evidence is weakly related.",
+      "diagnoses": [
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Explain the missing physical protection, with no related section.",
+      "regression_pattern": "weak_relation",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 10,
+      "workbook_row": 11,
+      "split": "dev",
+      "question_sha256": "91f96cf59bd1ffab0a393d29da478e943c23338dd5577e8c7592ccb030aaf8d0",
+      "topic": "Non-standard service ports",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        64,
+        65,
+        66,
+        67
+      ],
+      "source_supported_target": "Non-standard port numbers are not established. Approved protocols and public SSH denial are separate controls.",
+      "reference_alignment": "Appropriately declines the reference Yes.",
+      "baseline_claim_review": "Correct abstention with generic presentation.",
+      "retrieval_review": "HTTPS retrieved; approved-port/public-SSH passages absent. No numeric port commitment.",
+      "diagnoses": [
+        "unsupported_reference",
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Explain missing port assignments; only cite directly relevant controls actually retrieved.",
+      "regression_pattern": "numeric_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 11,
+      "workbook_row": 12,
+      "split": "dev",
+      "question_sha256": "e1a55ee5cac972a864bb6ef5ba57802c7696a88d74baf7f0aed338f29245fab2",
+      "topic": "Incident reporting and actions",
+      "expected_status": "answered",
+      "reference_support": "broadly_supported",
+      "evidence_pages": [
+        20,
+        21,
+        39,
+        55,
+        76
+      ],
+      "source_supported_target": "Combine reporting procedures with documented roles, classification, response and recovery. Avoid an unlimited all-actions claim.",
+      "reference_alignment": "Broad agreement; completeness is overstated.",
+      "baseline_claim_review": "Procedure evidence does not support the asserted event-reporting mechanism or all necessary actions.",
+      "retrieval_review": "Repeated incident-plan rows; direct reporting-mechanism evidence on pages 20/55 not retrieved.",
+      "diagnoses": [
+        "retrieval_miss",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Synthesize independently supported subparts; inspect duplicate plan rows before retrieval adjustments.",
+      "regression_pattern": "reporting_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            20,
+            38,
+            55
+          ],
+          "contains": [
+            "report",
+            "incidents"
+          ]
+        },
+        {
+          "pages": [
+            39,
+            76,
+            79,
+            82
+          ],
+          "contains": [
+            "incident response plan",
+            "classify"
+          ]
+        }
+      ]
+    },
+    {
+      "case": 12,
+      "workbook_row": 13,
+      "split": "dev",
+      "question_sha256": "0f19795e9a2570105bfbfd4beb4fd90db800db4314013f5fa8c7566baf53da13",
+      "topic": "Sanctions compliance officer",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [],
+      "source_supported_target": "The dedicated sanctions role is not established. Silence does not support No, and an information-security role is not a substitute.",
+      "reference_alignment": "Appropriately declines the reference No.",
+      "baseline_claim_review": "Correct abstention with generic presentation.",
+      "retrieval_review": "Security/team training passages are weakly related.",
+      "diagnoses": [
+        "unsupported_reference",
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Identify the missing role; omit unrelated security-role facts.",
+      "regression_pattern": "negative_requires_evidence",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 13,
+      "workbook_row": 14,
+      "split": "dev",
+      "question_sha256": "b1ac1115d9c024c6204e077d8b0e89ac246d8d32020ef2a8b5d412449552f462",
+      "topic": "FDA-specific quality assurance",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        17,
+        18,
+        80
+      ],
+      "source_supported_target": "Ordinary QA and software testing are supported; FDA applicability and FDA-specific assurance are not established.",
+      "reference_alignment": "Disagrees with reference N/A; neither reference N/A nor actual Yes is supported.",
+      "baseline_claim_review": "Critical scope substitution from general QA to FDA-regulated systems.",
+      "retrieval_review": "Strong ordinary QA evidence retrieved, including page 18; FDA scope absent.",
+      "diagnoses": [
+        "unsupported_reference",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Require explicit regulated scope or explicit non-applicability; general QA may be separately cited related information.",
+      "regression_pattern": "regulated_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 14,
+      "workbook_row": 15,
+      "split": "dev",
+      "question_sha256": "d39a6f2cc059cd653e11214516e230e20995b30031240ef3c2eed2673af511f1",
+      "topic": "Simultaneous wired/wireless use",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        20
+      ],
+      "source_supported_target": "The simultaneous-connection prohibition is not established. Remote operations do not prove a wireless rule or non-applicability.",
+      "reference_alignment": "Appropriately declines reference N/A.",
+      "baseline_claim_review": "Correct abstention with generic presentation.",
+      "retrieval_review": "Policy list and firewall controls do not establish the wireless-policy rule.",
+      "diagnoses": [
+        "unsupported_reference",
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Explain the missing rule; omit remote-work context when the relationship is weak.",
+      "regression_pattern": "nonapplicability_requires_evidence",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 15,
+      "workbook_row": 16,
+      "split": "dev",
+      "question_sha256": "f40ff7f1cc30ceb88056f0e8649f2af316e040cca652edccfee995e9acf53952",
+      "topic": "Rogue wireless detection",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [],
+      "source_supported_target": "Wireless monitoring/alerting and quarterly rogue-AP scanning are not established. Generic IDS does not establish wireless scope.",
+      "reference_alignment": "Disagrees with reference N/A; actual affirmative claim is also unsupported.",
+      "baseline_claim_review": "Promotes generic IDS/monitoring to a Wireless Security Policy requirement.",
+      "retrieval_review": "Generic monitoring and IDS retrieved; wireless-specific evidence absent.",
+      "diagnoses": [
+        "unsupported_reference",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Require matching system scope and frequency; omit unrelated controls.",
+      "regression_pattern": "wireless_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 16,
+      "workbook_row": 17,
+      "split": "dev",
+      "question_sha256": "e3cbae3eef138ad263bb67624f5a345762b71e887ac390475c953dd82a46214a",
+      "topic": "Signature-update deadline",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        69
+      ],
+      "source_supported_target": "Antimalware deployment is documented; a 24-hour signature-update commitment and N/A are not.",
+      "reference_alignment": "Appropriately declines reference N/A.",
+      "baseline_claim_review": "Correct abstention with generic presentation.",
+      "retrieval_review": "Antimalware evidence retrieved; signature deadline absent.",
+      "diagnoses": [
+        "unsupported_reference",
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Explain missing signature-update deadline; cite deployed antimalware separately without equating it with OS patches.",
+      "regression_pattern": "update_deadline",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 17,
+      "workbook_row": 18,
+      "split": "dev",
+      "question_sha256": "7bcaf6c34f1c449b8178ec07fef1030aed87a8b414d0891af85d69dd4d440f11",
+      "topic": "Failed-login lockout",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        16,
+        55,
+        57,
+        66
+      ],
+      "source_supported_target": "Lockout behavior and 3-5 attempt threshold are not established. MFA and inactivity logout cannot imply a lockout answer.",
+      "reference_alignment": "Appropriately declines unsupported No, preference for MFA and default service lockouts.",
+      "baseline_claim_review": "Correct abstention with generic presentation.",
+      "retrieval_review": "Inactivity/SSH controls retrieved; MFA evidence not retrieved.",
+      "diagnoses": [
+        "unsupported_reference",
+        "presentation_limitation"
+      ],
+      "proposed_fix": "Explain missing lockout threshold. Do not force an MFA related fact from evaluation knowledge; cite only retrieved, directly relevant evidence.",
+      "regression_pattern": "unrelated_controls",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 18,
+      "workbook_row": 19,
+      "split": "dev",
+      "question_sha256": "b485e5b9146f3a7518dd0a2933c0743c57e5a8bf6f708bc01ac0404dbf8d7d08",
+      "topic": "IoT asset inventory",
+      "expected_status": "not_found",
+      "reference_support": "unsupported",
+      "evidence_pages": [
+        36,
+        59
+      ],
+      "source_supported_target": "Central inventory is supported; IoT inclusion or non-use is not established. Inventory is related context rather than an answered subpart.",
+      "reference_alignment": "Appropriately avoids reference IoT non-use but labels the missing scoped claim partial.",
+      "baseline_claim_review": "Text is qualified, but partial status incorrectly treats generic inventory as answering IoT inclusion.",
+      "retrieval_review": "Inventory evidence retrieved; some overcitation to configuration standards.",
+      "diagnoses": [
+        "unsupported_reference",
+        "answer_generation_error"
+      ],
+      "proposed_fix": "Use not_found for a single unsupported scoped claim; move inventory to separately cited related information.",
+      "regression_pattern": "population_scope",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": []
+    },
+    {
+      "case": 19,
+      "workbook_row": 20,
+      "split": "dev",
+      "question_sha256": "f74949d196ccd06b161c860ce03d3fca3ae7bf42c0e1ea36ffba750c7718ed14",
+      "topic": "Role-based access process",
+      "expected_status": "answered",
+      "reference_support": "broadly_supported",
+      "evidence_pages": [
+        22,
+        59,
+        60,
+        61,
+        62
+      ],
+      "source_supported_target": "Describe formal requests, approval, least privilege, role-based provisioning, reviews and removal; do not invent a named IAM product.",
+      "reference_alignment": "Broadly agrees with the reference.",
+      "baseline_claim_review": "Broadly supported process description; prefer process wording over suggesting a particular product.",
+      "retrieval_review": "Request/approval, role-based access and review evidence retrieved. The termination-checklist row on pages 60/62 is missing; the baseline answer does not claim a removal deadline.",
+      "diagnoses": [
+        "none"
+      ],
+      "proposed_fix": "Preserve concise process answer and citations; counterfactual fixtures guard unsupported named products.",
+      "regression_pattern": "access_process",
+      "retest_outcome": "Offline contract/generalization fixtures only; post-change live answer quality has not been measured.",
+      "required_evidence": [
+        {
+          "pages": [
+            59
+          ],
+          "contains": [
+            "access requests",
+            "approved",
+            "least privilege"
+          ]
+        },
+        {
+          "pages": [
+            22
+          ],
+          "contains": [
+            "role-based",
+            "least privilege"
+          ]
+        },
+        {
+          "pages": [
+            60,
+            61
+          ],
+          "contains": [
+            "access reviews"
+          ]
+        },
+        {
+          "pages": [
+            60,
+            62
+          ],
+          "contains": [
+            "termination checklist",
+            "removed"
+          ]
+        }
+      ]
+    }
+  ]
+}

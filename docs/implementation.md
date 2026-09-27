@@ -38,3 +38,31 @@ Coding conventions: small modules with explicit dependencies; typed public
 contracts; thin routes; offline tests of behavior; safe structured logs;
 never put source text, prompts, answers or secrets into logs. Use clear names
 and straightforward code without new narrative or change-history comments.
+
+## Grounded-answer development increment
+
+Capture the exact 19 workbook questions once before behavior changes, using only
+the SOC 2 PDF as runtime evidence. Keep workbook answers outside generation;
+ignore comments and confidence. Preserve ranked retrieval, actual results,
+citations, warnings, configuration, latency and usage. Review reference alignment
+and PDF correctness separately, with an individual diagnosis and fix for every case.
+
+Generate concise answers with requested-subpart coverage and explicit support for
+yes/no/N/A. Preserve scope, actor, numbers and qualifications. Distinguish criteria,
+implemented controls, supplier responsibilities and audit findings. Replace forced
+generic abstention with a specific gap explanation. Only not_found may include
+optional related_information, at most two short directly related facts with separate
+citations. Server-derived excerpts and ID allowlisting remain authoritative.
+Invalid/missing related citations are execution errors. Omit empty related facts;
+render them safely under a distinct heading and preserve them in JSON export.
+
+Do not hardcode answers, question matching, company rules or page boosts. Keep dense
+retrieval initially and propose changes only against observed misses. Add authored
+paraphrased/counterfactual development cases for all failure patterns, explicit
+negatives, supported non-applicability and weak evidence. Preserve the original
+held-out suite. Mock tests verify contracts, not semantic model quality.
+
+The approved one-time baseline has 19 questions and a disclosed conservative
+$0.14 estimate. Any post-change paid evaluation needs its own approval. Deliver
+the 19-row review with honest pending retest outcomes, offline checks, browser
+checks and a local commit. No storage reset or model/stack/vision change.

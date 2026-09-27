@@ -48,6 +48,10 @@ input:focus-visible, button:focus-visible, summary:focus-visible, a:focus-visibl
 .question-number { font-size: 11px; color: #6c8072; overflow-wrap: anywhere; }
 .result h3 { font-size: 16px; line-height: 1.5; margin: 14px 0 10px; overflow-wrap: anywhere; white-space: pre-wrap; }
 .answer { font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 16px; }
+.related-information { border-top: 1px solid #e3eae3; margin-top: 18px; padding-top: 16px; }
+.related-information h4 { margin: 0; font-size: 12px; color: #536b5d; }
+.related-information > div { margin-top: 16px; }
+.related-information .answer { font-size: 13px; margin-bottom: 8px; }
 .badge { display: inline-block; flex-shrink: 0; text-transform: uppercase; letter-spacing: .7px; font-size: 9px; border-radius: 4px; background: #ebf4e9; color: #356642; padding: 5px 8px; }
 .badge.partial { background: #fff5d6; color: #876726; }
 .badge.not_found { background: #eff1f1; color: #58675f; }

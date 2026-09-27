@@ -63,10 +63,12 @@ The response contains `document_id`, `results`, `warnings`, and `batch_status`. 
 |---|---|
 | `answered` | Supported answer, with citations |
 | `partial` | Supported portions plus an explicit account of missing information |
-| `not_found` | Exactly “Not found in the provided document.”, no citations |
+| `not_found` | Short explanation of the specific missing information; no answer citations |
 | `error` | Null answer; safe `{code, message}` execution error |
 
 Citations contain a stable source ID, server-derived excerpt, kind, and locations: one-based PDF page plus `[x0,y0,x1,y1]` in PDF points, or an exact JSON record path. Optional visual descriptions are labeled `derived: true`. Citation validation checks identity/provenance and required presence; semantic support still needs evaluation.
+
+A `not_found` result may also contain `related_information: [{"text": "…", "citations": [...]}]`: at most two short, directly relevant facts, each with its own citations. These appear under **Related information** and cannot establish a yes/no answer. The field is omitted when empty and for other statuses. Missing or invented related citations become execution errors. For example, a documented authentication control does not establish a failed-login lockout threshold. No retrieved evidence still produces a generic abstention.
 
 Once ingestion succeeds, a batch returns HTTP 200 even if every question fails. `batch_status` is `completed`, `partial_failure`, or `failed`; `partial` answers and `not_found` are successful executions. Answering deadlines preserve finished results and mark unfinished entries `request_timeout`.
 
@@ -110,6 +112,14 @@ docker build -t docwiki:local .
 ```
 
 Tests use actual multipart requests, parsing, chunking, LlamaIndex indexing/retrieval, and Chroma with deterministic fake providers. They never require a key. The offline evaluator does **not** measure OpenAI quality. See [evaluation observations](docs/evaluation.md), [review resolutions](docs/review.md), and the [rubric evidence matrix](docs/evidence.md).
+
+The separately approved 19-question workbook baseline and its source review are summarized in [the workbook review](docs/workbook-review.md). Rebuild the detailed local report from its saved capture without any provider calls:
+
+```bash
+uv run python -m docwiki.workbook_review
+```
+
+This writes `evaluation/runs/workbook-review.html` and `.json`. The capture, original questions/reference answers and source excerpts remain local and ignored. The committed manifest contains authored judgments; runtime generation never reads it. No post-change paid retest has been run.
 
 For an explicit fake-provider browser session:
 
