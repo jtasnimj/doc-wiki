@@ -2,6 +2,7 @@ import asyncio
 import shutil
 import time
 from pathlib import Path
+from typing import Literal
 from weakref import WeakValueDictionary
 
 from filelock import FileLock, Timeout
@@ -99,7 +100,7 @@ class QAService:
         finally:
             self.lock.release()
 
-    async def ingest(self, raw: bytes, source_type: str) -> DocumentInfo:
+    async def ingest(self, raw: bytes, source_type: Literal["pdf", "json"]) -> DocumentInfo:
         doc_id = self.store.document_id(raw)
         lock = self.locks.setdefault(doc_id, asyncio.Lock())
         async with lock:
@@ -189,7 +190,7 @@ class QAService:
                 )
             )
         extraction.warnings.append(
-            f"Derived visual descriptions added for {len(selected)} crops; coverage remains heuristic."
+            f"Added derived descriptions for {len(selected)} crops; coverage remains heuristic."
         )
         if len(extraction.visual_candidates) > len(selected):
             extraction.warnings.append(

@@ -12,6 +12,7 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 data/
+.data.lock
 evaluation/runs/
 instructions/
 dist/

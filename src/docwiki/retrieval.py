@@ -259,4 +259,7 @@ class IndexStore:
         return evidence
 
     async def close(self):
+        if hasattr(self, "client"):
+            # Chroma 1.5 exposes close on the concrete client, ahead of ClientAPI's typing.
+            await self.run(getattr(self.client, "close"))
         await asyncio.to_thread(self.executor.shutdown, wait=True)

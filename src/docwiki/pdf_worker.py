@@ -1,6 +1,7 @@
 """Process-only PyMuPDF adapter. No imports from API, providers or vector storage."""
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -9,7 +10,7 @@ import pymupdf
 
 
 def extract(path: str, options: dict) -> dict:
-    blocks, warnings, skipped, candidates = [], [], [], []
+    blocks, warnings, skipped, candidates, unknown_headers = [], [], [], [], []
     total = 0
     with pymupdf.open(path) as doc:
         if doc.needs_pass:
@@ -23,13 +24,41 @@ def extract(path: str, options: dict) -> dict:
                 image_pages.setdefault(img[0], set()).add(page.number)
         for page in doc:
             page_blocks: list[dict[str, Any]] = []
-            tables = page.find_tables().tables
+            drawings = [
+                d for d in page.get_drawings() if d["rect"].get_area() < page.rect.get_area() * 0.85
+            ]
+            tables = page.find_tables(paths=drawings).tables
             rects = [pymupdf.Rect(t.bbox) for t in tables]
             for table in tables:
                 rows = [[cell or "" for cell in row] for row in table.extract()]
-                headers = [name or f"Column {i + 1}" for i, name in enumerate(table.header.names)]
-                if rows and not table.header.external:
+                names = table.header.names
+                plausible = all(name and len(name) < 80 and name.count("\n") <= 2 for name in names)
+                headers = (
+                    list(names) if plausible else [f"Column {i + 1}" for i in range(len(names))]
+                )
+                if (
+                    rows
+                    and not plausible
+                    and table.header.external
+                    and all(cell.strip() and len(cell) < 80 for cell in rows[0])
+                ):
+                    headers, rows = rows[0], rows[1:]
+                elif rows and plausible and not table.header.external:
                     rows = rows[1:]
+                elif not plausible:
+                    header_index = next(
+                        (
+                            i
+                            for i, row in enumerate(rows[:2])
+                            if all(cell.strip() and len(cell) < 80 for cell in row)
+                            and not re.search(r"\d", row[0])
+                        ),
+                        None,
+                    )
+                    if header_index is not None:
+                        headers, rows = rows[header_index], rows[header_index + 1 :]
+                    else:
+                        unknown_headers.append(page.number + 1)
                 if not rows:
                     continue
                 page_blocks.append(
@@ -73,13 +102,19 @@ def extract(path: str, options: dict) -> dict:
             for img in page.get_images():
                 if len(image_pages[img[0]]) == 1:
                     visual_rects.extend(page.get_image_rects(img[0]))
-            drawings = page.get_drawings()
             if drawings:
-                visual_rects.extend(page.cluster_drawings(drawings=drawings))
+                body_drawings = [
+                    d
+                    for d in drawings
+                    if d["rect"].y0 > page.rect.height * 0.1
+                    and d["rect"].y1 < page.rect.height * 0.9
+                ]
+                if body_drawings:
+                    visual_rects.extend(page.cluster_drawings(drawings=body_drawings))
             visual_rects = [
                 r
                 for r in visual_rects
-                if r.get_area() > page.rect.get_area() * 0.07
+                if page.rect.get_area() * 0.07 < r.get_area() < page.rect.get_area() * 0.85
                 and not any((r & t).get_area() > r.get_area() * 0.5 for t in rects)
             ]
             if visual_rects:
@@ -99,6 +134,12 @@ def extract(path: str, options: dict) -> dict:
                 "Limited text coverage on PDF pages: "
                 + ", ".join(map(str, skipped))
                 + ". OCR is disabled."
+            )
+        if unknown_headers:
+            warnings.append(
+                "No reliable table headers on pages "
+                + ", ".join(map(str, sorted(set(unknown_headers))))
+                + "; positional columns retained without cross-page stitching."
             )
         if candidates:
             warnings.append(
