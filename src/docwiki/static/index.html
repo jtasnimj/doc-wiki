@@ -4,40 +4,56 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DocWiki · Answers from your documents</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
   <main>
-    <header><a class="brand" href="/">DocWiki<span> / DOCUMENT Q&amp;A</span></a><a href="/docs">API docs ↗</a></header>
-    <section class="intro"><p class="eyebrow">YOUR DOCUMENTS, WITH SOURCES</p><h1>Ask a question.<br>Keep the evidence.</h1><p>Upload a document and a list of questions. Get answers with the passages that support them, and a clear response when information is missing.</p></section>
-    <div class="workspace">
-      <section class="panel inputs" aria-labelledby="source-title">
-        <div class="section-label">01 / SOURCE</div><h2 id="source-title">Choose your document</h2>
-        <label class="file-label" for="document">PDF or JSON document <span>Up to 10 MiB · 150 PDF pages</span></label>
-        <input type="file" id="document" accept=".pdf,.json,application/pdf,application/json">
-        <button id="upload" class="secondary" disabled>Prepare document</button>
-        <p id="document-status" class="muted" role="status">No document prepared.</p>
-        <div class="divider"></div>
-        <div class="section-label">02 / QUESTIONS</div><h2>Answer a batch</h2>
-        <label class="file-label" for="questions">Questions JSON <span>Up to 20 questions · 256 KiB</span></label>
-        <input type="file" id="questions" accept=".json,application/json">
-        <p class="hint">Use a list of strings, or records with <code>question</code> and an optional <code>id</code>.</p>
-        <button id="batch" disabled>Answer questions <span aria-hidden="true">↗</span></button>
-        <div class="divider"></div>
-        <h2><label for="question">Or ask one question</label></h2>
-        <textarea id="question" rows="3" maxlength="2000" placeholder="Which cloud providers does this document mention?"></textarea>
-        <button id="ask" class="secondary" disabled>Ask prepared document</button>
-        <p class="hint">Each question stands on its own. Answers use the selected document only.</p>
-      </section>
-      <section class="panel output" aria-labelledby="results-title">
-        <div class="output-heading"><div><div class="section-label">03 / FINDINGS</div><h2 id="results-title">Answers &amp; sources</h2></div><button id="export" class="text-button" disabled>Export JSON ↓</button></div>
-        <p id="progress" role="status" aria-live="polite"></p>
-        <p id="error" class="error" role="alert" hidden></p>
-        <ul id="warnings" class="warnings" hidden></ul>
-        <div id="results"><div class="empty"><span class="empty-symbol" aria-hidden="true">≡</span><h3>Your evidence starts here</h3><p>Choose a document and upload your questions, or prepare a document to ask one question.</p></div></div>
-      </section>
-    </div>
+    <header>
+      <a class="brand" href="/">DocWiki<span> / DOCUMENT Q&amp;A</span></a>
+      <a href="/docs">API docs ↗</a>
+    </header>
+    <section class="intro">
+      <p class="eyebrow">YOUR DOCUMENTS, WITH SOURCES</p>
+      <h1>Questions in.<br>Answers with evidence.</h1>
+      <p>Choose a source document and a JSON list of questions. Get an answer to each question, with the passages that support it.</p>
+    </section>
+    <section class="panel upload-panel" aria-labelledby="upload-title">
+      <div class="section-label">01 / YOUR FILES</div>
+      <h2 id="upload-title">Two files. One submission.</h2>
+      <form id="qa-form">
+        <div class="file-grid">
+          <div>
+            <label for="document">Source document</label>
+            <p class="hint" id="document-hint">PDF or JSON · Up to 10 MiB · 150 PDF pages</p>
+            <input type="file" id="document" name="document_file" accept=".pdf,.json,application/pdf,application/json" aria-describedby="document-hint" required>
+          </div>
+          <div>
+            <label for="questions">Questions file</label>
+            <p class="hint" id="questions-hint">JSON · Up to 20 questions · 256 KiB</p>
+            <input type="file" id="questions" name="questions_file" accept=".json,application/json" aria-describedby="questions-hint questions-format" required>
+          </div>
+        </div>
+        <div class="form-footer">
+          <p class="hint" id="questions-format">Questions can be a list of strings, or records with <code>question</code> and an optional <code>id</code>.</p>
+          <button id="batch" type="submit" disabled>Answer questions ↗</button>
+        </div>
+      </form>
+    </section>
+    <section class="panel output" aria-labelledby="results-title">
+      <div class="output-heading">
+        <div><div class="section-label">02 / FINDINGS</div><h2 id="results-title">Answers &amp; sources</h2></div>
+        <button id="export" class="text-button" type="button" disabled>Export JSON ↓</button>
+      </div>
+      <p id="progress" role="status" aria-live="polite"></p>
+      <p id="error" class="error" role="alert" hidden></p>
+      <ul id="warnings" class="warnings" hidden></ul>
+      <p id="result-summary" class="result-summary" hidden></p>
+      <div id="results">
+        <div class="empty"><span class="empty-symbol" aria-hidden="true">≡</span><h3>Your evidence starts here</h3><p>Select both files above. Your questions, answers, and source passages will appear here.</p></div>
+      </div>
+    </section>
     <footer>PDF text and tables · Nested JSON · Source citations <span>Local assessment application</span></footer>
   </main>
 </body>

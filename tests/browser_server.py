@@ -8,13 +8,24 @@ import uvicorn
 
 from docwiki.app import create_app
 from docwiki.config import Settings
+from docwiki.contracts import ModelAnswer
+from docwiki.errors import AppError
 from docwiki.offline import FakeProvider
 
 
 class BrowserProvider(FakeProvider):
     async def answer(self, question, evidence, warnings):
-        # A short deterministic delay makes the loading state observable in the browser.
         await asyncio.sleep(0.15)
+        if question == "Missing fact?":
+            return ModelAnswer(status="not_found", answer="Not found.", source_ids=[])
+        if question == "Partial fact?":
+            return ModelAnswer(
+                status="partial",
+                answer="ExampleCloud is documented; the requested region is missing.",
+                source_ids=[evidence[0].source_id],
+            )
+        if question == "Fail this question?":
+            raise AppError("provider_unavailable", "Provider could not complete the request.", 503)
         return await super().answer(question, evidence, warnings)
 
 

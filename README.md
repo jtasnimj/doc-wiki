@@ -24,10 +24,10 @@ Use **one API process per data directory**. A file lock enforces this. The defau
 | Route | Input | Result |
 |---|---|---|
 | `POST /api/qa` | Multipart `questions_file`, `document_file` | Ordered batch answers |
-| `POST /api/documents` | Multipart `document_file` | Ready document ID, page/chunk counts, warnings, cache hit |
-| `POST /api/documents/{document_id}/questions` | JSON `{"questions": [...]}` | Answers using the existing index |
 | `GET /healthz` | None | `{"status":"ok"}`, no provider call |
-| `/` | Browser | Upload, prepare, batch/single questions, citations, JSON export |
+| `/docs` | Browser | Interactive API documentation and file-upload controls |
+| `/openapi.json` | None | Machine-readable API schema |
+| `/` | Browser | Centered two-file form, ordered answers, citations, JSON export |
 
 Canonical JSON-source request:
 
@@ -45,16 +45,7 @@ curl --fail-with-body http://127.0.0.1:8000/api/qa \
   -F 'document_file=@evaluation/sources/policy.pdf;type=application/pdf'
 ```
 
-Prepare once and reuse the returned ID:
-
-```bash
-curl --fail-with-body http://127.0.0.1:8000/api/documents \
-  -F 'document_file=@examples/source.json;type=application/json'
-
-curl --fail-with-body http://127.0.0.1:8000/api/documents/DOCUMENT_ID/questions \
-  -H 'Content-Type: application/json' \
-  -d '{"questions":[{"id":"hosting","question":"Which cloud provider is used?"}]}'
-```
+Every submission sends both files in one request. Re-uploading the same document with the same relevant configuration automatically reuses its ready index, including across restarts. The returned document ID identifies the source; there is no separate document-management or single-question endpoint. To ask one question, upload a JSON list containing one entry.
 
 Questions files accept a list of strings, a list of records, or a mixture, optionally wrapped in `questions`:
 
@@ -77,7 +68,20 @@ The response contains `document_id`, `results`, `warnings`, and `batch_status`. 
 
 Citations contain a stable source ID, server-derived excerpt, kind, and locations: one-based PDF page plus `[x0,y0,x1,y1]` in PDF points, or an exact JSON record path. Optional visual descriptions are labeled `derived: true`. Citation validation checks identity/provenance and required presence; semantic support still needs evaluation.
 
-Once ingestion succeeds, a batch returns HTTP 200 even if every question fails. `batch_status` is `completed`, `partial_failure`, or `failed`; `partial` answers and `not_found` are successful executions. Answering deadlines preserve finished results and mark unfinished entries `request_timeout`. Document-level errors use 422 for invalid content, 413 for size limits, 415 for unsupported types, 404 for missing ready documents, and 502/503/504 for provider or deadline failures. Error responses contain a safe code/message and request ID.
+Once ingestion succeeds, a batch returns HTTP 200 even if every question fails. `batch_status` is `completed`, `partial_failure`, or `failed`; `partial` answers and `not_found` are successful executions. Answering deadlines preserve finished results and mark unfinished entries `request_timeout`.
+
+Request/document-level errors use the typed `{ "error": { "code": "...", "message": "..." }, "request_id": "..." }` envelope. Swagger includes the schema, descriptions, and examples for each response:
+
+| HTTP status | Meaning |
+|---|---|
+| 400 | Malformed questions JSON or multipart encoding |
+| 413 | An uploaded file or the whole request exceeds its size limit |
+| 415 | Unsupported file type |
+| 422 | Missing/incorrect file fields, invalid questions, or invalid source content |
+| 500 | Unexpected server failure |
+| 502 / 503 / 504 | Provider failure, unavailability, or deadline during document ingestion |
+
+Select both files in the centered form and click **Answer questions**. Results appear below as ordered cards with status, answer, and expandable source excerpts. Changing either file clears the previous results and export state. Inputs are disabled while processing; warnings and safe errors remain visible. **Export JSON** downloads the response unchanged.
 
 ## Limits and controls
 
@@ -127,7 +131,7 @@ docker run --rm --name docwiki -p 127.0.0.1:8000:8000 \
   --env-file .env -v docwiki-data:/app/data docwiki:local
 ```
 
-The image runs one Uvicorn process as UID 10001. For a host bind mount, grant that UID write access to the chosen data directory. The named volume persists across container restarts. Logs are structured JSON with IDs, timings, counts, cache results, safe errors, and provider usage; document text and credentials are omitted.
+The image runs one Uvicorn process as UID 10001. For a host bind mount, grant that UID write access to the chosen data directory. The named volume persists across container restarts. Application events are structured JSON with request IDs, HTTP status/latency, ingestion timing/counts/cache results, provider/model, retries, provider latency, and reported token usage. Document text, questions, answers, uploaded filenames, and credentials are omitted. Uvicorn startup/access messages use its standard format. `tests/test_observability.py` verifies the JSON fields and sensitive-data exclusion with an offline SDK transport; no separate metrics service is required.
 
 Stop the server before resetting. Reset removes the app-managed uploads, crops, and indexes under the configured directory:
 
@@ -147,4 +151,4 @@ Source inspection verified a development question whose answer appears only in a
 
 Live tests require separate approval with an explicit case count and estimated cost. `uv run python -m docwiki.eval --mode estimate --split dev` makes no calls. After approval, the evaluator also requires `DOCWIKI_LIVE_APPROVED=1` and sufficient `--budget-usd`; see the evaluation document. Verify embedding-model access first, stop on quota errors, and reserve part of the assessment's $5 budget for the demonstration. Usage estimates do not establish the key's remaining balance.
 
-Original assessment files stay in ignored `instructions/`; only authored fixtures are included. Review [dependency licensing and redistribution](docs/licenses.md) before submission. No project license has been selected. Commits remain local on `feature/doc-wiki-with-rag`; remote publication and paid calls have not been performed. Container execution is pending a working local Docker daemon.
+Original assessment files stay in ignored `instructions/`; only authored fixtures are included. Review [dependency licensing and redistribution](docs/licenses.md) before submission. No project license has been selected. Commits remain local on `feature/doc-wiki-with-rag`. Automated verification remains offline; paid evaluation and publication require separate approval. Container execution is pending a working local Docker daemon.

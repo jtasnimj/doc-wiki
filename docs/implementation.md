@@ -1,8 +1,9 @@
 # Approved implementation scope
 
-Build FastAPI endpoints `/api/qa`, `/api/documents`, and
-`/api/documents/{document_id}/questions`, health, and a plain browser UI.
-The canonical request uploads questions JSON and a PDF or JSON source.
+Expose `/api/qa` as the only Q&A endpoint, plus health, Swagger documentation,
+the raw OpenAPI schema, and a plain browser UI. Every Q&A request uploads
+questions JSON and a PDF or JSON source. Use one centered form and ordered
+answer cards with citations; no document-preparation or separate question route.
 Use Python 3.12, page-aware PyMuPDF, LlamaIndex nodes/index/retrieval,
 Chroma PersistentClient, explicit gpt-4o-mini generation and
 text-embedding-3-small embeddings.
@@ -11,6 +12,11 @@ Preserve question order, IDs, duplicates, source context and citations.
 Separate answered, partial, not_found and error outcomes. Ignore answer-like
 fields in questions files. Support nested source JSON and typed scalar values.
 Keep PDF tables page-scoped; do not stitch across pages in baseline.
+
+Keep the existing success response format. Document typed error envelopes for
+400 malformed questions JSON/multipart, 413 oversized uploads, 415 unsupported
+formats, 422 validation errors, and 500/502/503/504 execution failures before
+answering. Once ingestion succeeds, preserve HTTP 200 with per-question results.
 
 Bound uploads, extraction and provider work. PDF work uses a terminable
 subprocess, never concurrent threads. Use an application-wide provider gate,
@@ -30,4 +36,5 @@ configured author on feature/doc-wiki-with-rag. No remote publication yet.
 
 Coding conventions: small modules with explicit dependencies; typed public
 contracts; thin routes; offline tests of behavior; safe structured logs;
-never put source text, prompts, answers or secrets into logs.
+never put source text, prompts, answers or secrets into logs. Use clear names
+and straightforward code without new narrative or change-history comments.

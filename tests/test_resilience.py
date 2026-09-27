@@ -134,8 +134,11 @@ async def test_health_responsive_while_extraction_is_waiting(tmp_path):
         ) as client:
             ingest = asyncio.create_task(
                 client.post(
-                    "/api/documents",
-                    files={"document_file": ("x.pdf", b"%PDF-test", "application/pdf")},
+                    "/api/qa",
+                    files={
+                        "document_file": ("x.pdf", b"%PDF-test", "application/pdf"),
+                        "questions_file": ("q.json", b'["Cloud?"]', "application/json"),
+                    },
                 )
             )
             await asyncio.wait_for(entered.wait(), 2)
@@ -161,9 +164,10 @@ async def test_body_and_part_limits_before_paid_work(tmp_path):
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
             response = await client.post(
-                "/api/documents",
+                "/api/qa",
                 files={
-                    "document_file": ("x.json", b'{"a":"' + b"x" * 200 + b'"}', "application/json")
+                    "document_file": ("x.json", b'{"a":"' + b"x" * 200 + b'"}', "application/json"),
+                    "questions_file": ("q.json", b'["Cloud?"]', "application/json"),
                 },
             )
             assert response.status_code == 413
@@ -190,7 +194,7 @@ async def test_body_and_part_limits_before_paid_work(tmp_path):
                 yield b"\r\n--hello--\r\n"
 
             response = await client.post(
-                "/api/documents",
+                "/api/qa",
                 content=stream(),
                 headers={"content-type": "multipart/form-data; boundary=hello"},
             )

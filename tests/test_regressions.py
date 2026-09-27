@@ -50,13 +50,14 @@ async def test_blank_example_key_leaves_health_available_and_provider_unconfigur
         ) as client:
             assert (await client.get("/healthz")).status_code == 200
             response = await client.post(
-                "/api/documents",
+                "/api/qa",
                 files={
                     "document_file": (
                         "source.json",
                         b'{"cloud":"ExampleCloud"}',
                         "application/json",
-                    )
+                    ),
+                    "questions_file": ("q.json", b'["Cloud?"]', "application/json"),
                 },
             )
             assert response.status_code == 503
@@ -70,7 +71,7 @@ async def test_slow_store_read_cannot_erase_completed_batch_answer(tmp_path):
     release = threading.Event()
     async with app.router.lifespan_context(app):
         service = app.state.service
-        doc = await service.ingest(b'{"cloud":"ExampleCloud"}', "json")
+        await service.ingest(b'{"cloud":"ExampleCloud"}', "json")
         retrieve = service.store.retrieve
 
         def controlled(doc_id, question, embedding):
@@ -84,8 +85,15 @@ async def test_slow_store_read_cannot_erase_completed_batch_answer(tmp_path):
                 transport=httpx.ASGITransport(app=app), base_url="http://test"
             ) as client:
                 response = await client.post(
-                    f"/api/documents/{doc.document_id}/questions",
-                    json={"questions": ["cloud", "slow"]},
+                    "/api/qa",
+                    files={
+                        "document_file": (
+                            "source.json",
+                            b'{"cloud":"ExampleCloud"}',
+                            "application/json",
+                        ),
+                        "questions_file": ("q.json", b'["cloud","slow"]', "application/json"),
+                    },
                 )
                 assert response.status_code == 200, response.text
                 assert [r["status"] for r in response.json()["results"]] == ["answered", "error"]

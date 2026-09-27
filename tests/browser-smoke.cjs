@@ -1,5 +1,3 @@
-// Optional browser check: start `uv run python -m tests.browser_server` first.
-// Uses an independently installed Playwright and Chromium; no runtime JS dependency.
 const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
@@ -10,24 +8,37 @@ const path = require("node:path");
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
     const errors = [];
+    const posts = [];
     page.on("pageerror", error => errors.push(error.message));
+    page.on("request", request => {
+      if (request.method() === "POST") posts.push(new URL(request.url()).pathname);
+    });
+    const jsonFile = (name, value) => ({name, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value))});
+    async function submit() {
+      const before = posts.length;
+      const reply = page.waitForResponse(response => response.url().endsWith("/api/qa"));
+      await page.locator("#batch").click();
+      const response = await reply;
+      await page.waitForFunction(() => !document.querySelector("#batch").disabled);
+      assert.equal(posts.length, before + 1);
+      assert.equal(posts.at(-1), "/api/qa");
+      return {status: response.status(), data: await response.json()};
+    }
     await page.goto("http://127.0.0.1:8765");
     assert(await page.locator("#batch").isDisabled());
-    assert(await page.locator("#ask").isDisabled());
+    assert.equal(await page.locator("#upload, #ask, #question, #document-status").count(), 0);
     const injection = '<img src=x onerror=window.docwikiPwned=true>';
-    await page.locator("#document").setInputFiles({
-      name: "source.json", mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify({ cloud: "ExampleCloud", note: injection }))
-    });
-    const question = `<script>window.docwikiPwned=true</script> Which cloud?`;
-    await page.locator("#questions").setInputFiles({
-      name: "questions.json", mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify([question, question]))
-    });
-    await page.locator("#batch").click();
+    await page.locator("#document").setInputFiles(jsonFile("source.json", {cloud: "ExampleCloud", note: injection}));
+    assert(await page.locator("#batch").isDisabled());
+    const question = '<script>window.docwikiPwned=true</script> Which cloud?';
+    await page.locator("#questions").setInputFiles(jsonFile("questions.json", [question, question]));
+    const pending = submit();
     await page.waitForFunction(() => document.querySelector("#progress").textContent.includes("Reading"));
     assert(await page.locator("#batch").isDisabled());
-    await page.waitForFunction(() => document.querySelectorAll(".result").length === 2);
+    assert(await page.locator("#document").isDisabled());
+    const first = await pending;
+    assert.equal(first.status, 200);
+    assert.equal(await page.locator(".result").count(), 2);
     assert.equal(await page.locator(".result h3").first().textContent(), question);
     await page.locator("details summary").first().click();
     assert((await page.locator("details pre").first().textContent()).includes(injection));
@@ -36,39 +47,74 @@ const path = require("node:path");
     const downloadPromise = page.waitForEvent("download");
     await page.locator("#export").click();
     const download = await downloadPromise;
-    const exported = JSON.parse(await fs.readFile(await download.path(), "utf8"));
-    assert.equal(exported.results.length, 2);
-    assert.notEqual(exported.results[0].id, exported.results[1].id);
-    assert.equal(exported.results[0].citations[0].locations[0].json_path, "$");
-    await page.locator("#upload").click();
-    await page.waitForFunction(() => document.querySelector("#document-status").textContent.includes("Reused index"));
-    await page.locator("#question").fill("Hosting provider?");
-    await page.locator("#ask").click();
-    await page.waitForFunction(() => document.querySelectorAll(".result").length === 1);
-    assert.equal(await page.locator(".result h3").textContent(), "Hosting provider?");
-    await page.locator("#questions").setInputFiles({
-      name: "bad.json", mimeType: "application/json", buffer: Buffer.from('[""]')
-    });
-    await page.locator("#batch").click();
-    await page.locator("#error").waitFor({ state: "visible" });
+    assert.deepEqual(JSON.parse(await fs.readFile(await download.path(), "utf8")), first.data);
+    assert.notEqual(first.data.results[0].id, first.data.results[1].id);
+    assert.equal(first.data.results[0].citations[0].locations[0].json_path, "$");
+    const repeated = await submit();
+    assert.equal(repeated.status, 200);
+    assert.equal(repeated.data.document_id, first.data.document_id);
+    assert.deepEqual(repeated.data.results, first.data.results);
+    await page.locator("#questions").setInputFiles(jsonFile("bad.json", [""]));
+    assert.equal(await page.locator(".result").count(), 0);
+    assert(await page.locator("#export").isDisabled());
+    assert.equal((await submit()).status, 422);
+    assert(await page.locator("#error").isVisible());
     assert((await page.locator("#error").textContent()).includes("Questions must contain"));
     assert(await page.locator("#batch").isEnabled());
+    await page.locator("#questions").setInputFiles(jsonFile("statuses.json", ["Cloud?", "Partial fact?", "Missing fact?", "Fail this question?"]));
+    assert(await page.locator("#error").isHidden());
+    const statuses = await submit();
+    assert.deepEqual(statuses.data.results.map(r => r.status), ["answered", "partial", "not_found", "error"]);
+    assert.deepEqual(await page.locator(".badge").allTextContents(), ["Answered", "Partial answer", "Not found", "Error"]);
+    assert((await page.locator("#result-summary").textContent()).includes("Some questions"));
+    await fs.mkdir("artifacts", {recursive: true});
+    await page.screenshot({path: "artifacts/browser-statuses.png", fullPage: true});
     await page.locator("#document").setInputFiles(path.resolve("evaluation/sources/policy.pdf"));
-    assert(await page.locator("#ask").isDisabled());
-    await page.locator("#questions").setInputFiles({
-      name: "questions.json", mimeType: "application/json", buffer: Buffer.from('["Hosting provider?"]')
-    });
-    await page.locator("#batch").click();
-    await page.waitForFunction(() => document.querySelector("details summary")?.textContent.includes("PDF page 2"));
+    assert.equal(await page.locator(".result").count(), 0);
+    assert(await page.locator("#export").isDisabled());
+    await page.locator("#questions").setInputFiles(jsonFile("questions.json", ["Hosting provider?"]));
+    assert.equal((await submit()).status, 200);
+    assert((await page.locator("details summary").first().textContent()).includes("PDF page 2"));
+    assert(await page.locator("#warnings").isVisible());
     await page.locator("details summary").first().click();
-    await fs.mkdir("artifacts", { recursive: true });
-    await page.screenshot({ path: "artifacts/browser-desktop.png", fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
+    const desktopDocument = await page.locator("#document").boundingBox();
+    const desktopQuestions = await page.locator("#questions").boundingBox();
+    assert(desktopQuestions.x > desktopDocument.x);
+    await page.screenshot({path: "artifacts/browser-desktop.png", fullPage: true});
+    await page.setViewportSize({width: 390, height: 844});
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
-    await page.screenshot({ path: "artifacts/browser-mobile.png", fullPage: true });
+    const mobileDocument = await page.locator("#document").boundingBox();
+    const mobileQuestions = await page.locator("#questions").boundingBox();
+    assert.equal(mobileDocument.x, mobileQuestions.x);
+    assert(mobileQuestions.y > mobileDocument.y);
+    await page.screenshot({path: "artifacts/browser-mobile.png", fullPage: true});
+    await page.locator("#questions").setInputFiles([]);
+    assert(await page.locator("#warnings").isHidden());
+    assert(await page.locator("#batch").isDisabled());
+    assert(await page.locator("#export").isDisabled());
+    await page.setViewportSize({width: 1280, height: 1100});
+    await page.getByRole("link", {name: "API docs"}).click();
+    await page.locator(".opblock").first().waitFor();
+    assert.equal(await page.locator(".opblock").count(), 2);
+    const qa = page.locator(".opblock-post");
+    await qa.locator(".opblock-summary").click();
+    await qa.locator(".responses-wrapper").waitFor();
+    const codes = await qa.locator(".responses-wrapper .response-col_status").allTextContents();
+    for (const code of ["200", "400", "413", "415", "422", "500", "502", "503", "504"]) assert(codes.some(c => c.trim() === code));
+    await qa.getByRole("button", {name: "Try it out"}).click();
+    const uploads = qa.locator('input[type="file"]');
+    assert.equal(await uploads.count(), 2);
+    await uploads.nth(0).setInputFiles(path.resolve("evaluation/sources/policy.pdf"));
+    await uploads.nth(1).setInputFiles(jsonFile("questions.json", ["Hosting provider?"]));
+    const swaggerReply = page.waitForResponse(response => response.url().endsWith("/api/qa"));
+    await qa.getByRole("button", {name: "Execute", exact: true}).click();
+    const swaggerResponse = await swaggerReply;
+    assert.equal(swaggerResponse.status(), 200);
+    assert.equal((await swaggerResponse.json()).results[0].status, "answered");
+    assert(posts.every(endpoint => endpoint === "/api/qa"));
     assert.deepEqual(errors, []);
-    console.log("Browser smoke passed: uploads, loading, duplicates, citations, reuse, single questions, errors, safe text, JSON export, responsive layout.");
+    console.log("Browser smoke passed: centered two-file submission, statuses, stale-state clearing, safe citations/export, responsive layout and Swagger file controls.");
   } finally {
     await browser.close();
   }
-})().catch(error => { console.error(error); process.exitCode = 1; });
+})().catch(error => {console.error(error); process.exitCode = 1;});

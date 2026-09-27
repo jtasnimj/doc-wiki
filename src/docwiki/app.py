@@ -14,7 +14,7 @@ from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException
 
 from docwiki.config import Settings
-from docwiki.contracts import BatchResponse, DocumentInfo, normalize_questions
+from docwiki.contracts import BatchResponse, ErrorResponse, ResultError, normalize_questions
 from docwiki.errors import AppError
 from docwiki.json_source import parse_json
 from docwiki.observability import configure_logging, event, request_id
@@ -24,7 +24,9 @@ from docwiki.service import QAService
 
 def error_response(error: AppError):
     return JSONResponse(
-        {"error": {"code": error.code, "message": error.message}, "request_id": request_id.get()},
+        ErrorResponse(
+            error=ResultError(code=error.code, message=error.message), request_id=request_id.get()
+        ).model_dump(),
         status_code=error.status,
     )
 
@@ -40,17 +42,12 @@ class RequestBounds:
         started = time.monotonic()
         scope.setdefault("state", {})["deadline"] = started + self.settings.request_timeout
         count, response_started, status = 0, False, 500
-        limit = (
-            self.settings.questions_bytes
-            if scope["path"].endswith("/questions")
-            else self.settings.body_bytes
-        )
 
         async def bounded_receive():
             nonlocal count
             message = await receive()
             count += len(message.get("body", b""))
-            if count > limit:
+            if count > self.settings.body_bytes:
                 raise AppError("upload_too_large", "Request exceeds the upload limit.", 413)
             return message
 
@@ -78,13 +75,21 @@ class RequestBounds:
             async with asyncio.timeout(self.settings.request_timeout):
                 await self.app(scope, bounded_receive, tagged_send)
         except TimeoutError:
+            event("request_error", error_category="request_timeout")
             if not response_started:
                 await error_response(
                     AppError("request_timeout", "Request deadline exceeded.", 504)
                 )(scope, receive, tagged_send)
         except AppError as exc:
+            event("request_error", error_category=exc.code)
             if not response_started:
                 await error_response(exc)(scope, receive, tagged_send)
+        except Exception:
+            event("request_error", error_category="internal_error")
+            if not response_started:
+                await error_response(
+                    AppError("internal_error", "The request could not be processed.", 500)
+                )(scope, receive, tagged_send)
         finally:
             event(
                 "request_complete",
@@ -94,8 +99,14 @@ class RequestBounds:
             request_id.reset(token)
 
 
-def multipart_schema(questions: bool = False):
-    names = ["document_file"] + (["questions_file"] if questions else [])
+def multipart_schema():
+    descriptions = {
+        "document_file": "PDF or JSON source document, up to 10 MiB.",
+        "questions_file": (
+            "JSON list of strings or records containing question and optional id, "
+            "optionally under a questions wrapper. Up to 20 questions and 256 KiB."
+        ),
+    }
     return {
         "requestBody": {
             "required": True,
@@ -103,9 +114,10 @@ def multipart_schema(questions: bool = False):
                 "multipart/form-data": {
                     "schema": {
                         "type": "object",
-                        "required": names,
+                        "required": list(descriptions),
                         "properties": {
-                            name: {"type": "string", "format": "binary"} for name in names
+                            name: {"type": "string", "format": "binary", "description": description}
+                            for name, description in descriptions.items()
                         },
                     }
                 }
@@ -114,27 +126,71 @@ def multipart_schema(questions: bool = False):
     }
 
 
-def question_schema():
-    item = {
-        "oneOf": [
-            {"type": "string"},
-            {
-                "type": "object",
-                "required": ["question"],
-                "properties": {"question": {"type": "string"}, "id": {"type": "string"}},
+def error_schemas():
+    errors = {
+        400: (
+            "Malformed questions JSON or multipart encoding.",
+            "invalid_json",
+            "Supply valid UTF-8 questions JSON.",
+        ),
+        413: (
+            "An uploaded file or the request exceeds its size limit.",
+            "upload_too_large",
+            "An uploaded file exceeds its size limit.",
+        ),
+        415: (
+            "Unsupported file type.",
+            "unsupported_format",
+            "Use JSON questions and a PDF or JSON document.",
+        ),
+        422: (
+            "Invalid file fields, question values, or source content.",
+            "invalid_questions",
+            "Supply 1–20 questions.",
+        ),
+        500: (
+            "Unexpected server failure.",
+            "internal_error",
+            "The request could not be processed.",
+        ),
+        502: (
+            "Document ingestion received an invalid provider response.",
+            "invalid_embeddings",
+            "Provider returned invalid embeddings.",
+        ),
+        503: (
+            "Provider configuration, access, quota, or availability failure during ingestion.",
+            "provider_unavailable",
+            "Provider could not complete the request.",
+        ),
+        504: (
+            "Extraction or request deadline exceeded before answering.",
+            "extraction_timeout",
+            "PDF extraction timed out.",
+        ),
+    }
+    return {
+        status: {
+            "model": ErrorResponse,
+            "description": description,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {"code": code, "message": message},
+                        "request_id": "0123456789abcdef0123456789abcdef",
+                    }
+                }
             },
-        ]
+        }
+        for status, (description, code, message) in errors.items()
     }
-    schema = {
-        "type": "object",
-        "required": ["questions"],
-        "properties": {"questions": {"type": "array", "items": item}},
-    }
-    return {"requestBody": {"required": True, "content": {"application/json": {"schema": schema}}}}
 
 
-async def read_uploads(request: Request, settings: Settings, batch: bool):
-    expected = {"document_file", "questions_file"} if batch else {"document_file"}
+async def read_uploads(request: Request, settings: Settings):
+    expected = {"document_file", "questions_file"}
+    content_type = request.headers.get("content-type", "").partition(";")[0].strip().lower()
+    if content_type != "multipart/form-data":
+        raise AppError("invalid_upload", "Use multipart/form-data with both uploaded files.", 400)
     try:
         async with request.form(
             max_files=len(expected), max_fields=0, max_part_size=settings.document_bytes
@@ -187,7 +243,9 @@ async def read_uploads(request: Request, settings: Settings, batch: bool):
                     source_type = "pdf" if suffix == ".pdf" else "json"
             return data, source_type
     except HTTPException as exc:
-        raise AppError("invalid_upload", "Malformed multipart upload or too many fields.") from exc
+        if str(exc.detail).startswith(("Too many files.", "Too many fields.")):
+            raise AppError("invalid_upload", "Supply exactly the documented file fields.") from None
+        raise AppError("invalid_upload", "Malformed multipart encoding.", 400) from None
 
 
 async def connected_work(request: Request, operation):
@@ -266,21 +324,31 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
             AppError("invalid_request", "Request does not match the documented schema.")
         )
 
-    @app.exception_handler(Exception)
-    async def unexpected_error(request, exc):
-        event("request_error", error_category="internal_error")
-        return error_response(
-            AppError("internal_error", "The request could not be processed.", 500)
-        )
-
     @app.get("/healthz")
     async def health():
         return {"status": "ok"}
 
-    @app.post("/api/qa", response_model=BatchResponse, openapi_extra=multipart_schema(True))
+    @app.post(
+        "/api/qa",
+        summary="Answer questions from uploaded files",
+        description=(
+            "Upload a questions JSON file and a PDF or JSON source. Results preserve input order "
+            "and duplicate questions. Once ingestion succeeds, answering failures remain "
+            "per-question errors in an HTTP 200 batch, including all-failed batches and "
+            "answering deadlines."
+        ),
+        response_model=BatchResponse,
+        responses=error_schemas(),
+        openapi_extra=multipart_schema(),
+    )
     async def qa(request: Request):
-        files, kind = await read_uploads(request, settings, True)
-        questions = normalize_questions(parse_json(files["questions_file"], settings), settings)
+        files, kind = await read_uploads(request, settings)
+        try:
+            questions = normalize_questions(parse_json(files["questions_file"], settings), settings)
+        except AppError as exc:
+            if exc.code == "invalid_json":
+                raise AppError(exc.code, exc.message, 400) from None
+            raise
 
         async def operation():
             service = request.app.state.service
@@ -290,28 +358,6 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
             )
 
         return await connected_work(request, operation())
-
-    @app.post("/api/documents", response_model=DocumentInfo, openapi_extra=multipart_schema())
-    async def documents(request: Request):
-        files, kind = await read_uploads(request, settings, False)
-        return await connected_work(
-            request, request.app.state.service.ingest(files["document_file"], kind)
-        )
-
-    @app.post(
-        "/api/documents/{document_id}/questions",
-        response_model=BatchResponse,
-        openapi_extra=question_schema(),
-    )
-    async def questions(document_id: str, request: Request):
-        value = parse_json(await request.body(), settings)
-        if not isinstance(value, dict) or "questions" not in value:
-            raise AppError("invalid_questions", "Use an object containing questions.")
-        normalized = normalize_questions(value, settings)
-        return await connected_work(
-            request,
-            request.app.state.service.questions(document_id, normalized, request.state.deadline),
-        )
 
     static = Path(__file__).parent / "static"
     app.mount("/static", StaticFiles(directory=static), name="static")

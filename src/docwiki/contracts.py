@@ -110,6 +110,11 @@ class ResultError(BaseModel):
     message: str
 
 
+class ErrorResponse(BaseModel):
+    error: ResultError
+    request_id: str
+
+
 class Result(Question):
     answer: str | None
     status: Literal["answered", "partial", "not_found", "error"]

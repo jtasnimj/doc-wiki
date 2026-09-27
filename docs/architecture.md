@@ -13,7 +13,9 @@ Browser / API client
   → citation allowlist + server excerpts → ordered results
 ```
 
-`app.py` owns HTTP validation and lifecycle, `service.py` coordinates ingestion and per-question outcomes, `json_source.py`/`pdf.py` normalize sources, and `retrieval.py` encapsulates nodes, Chroma, and LlamaIndex. `providers.py` owns explicit paid models, prompts, concurrency, timeouts, retries, and safe errors. `contracts.py` contains public and evidence schemas. The plain UI uses the same public endpoints as clients.
+`app.py` owns HTTP validation and lifecycle, `service.py` coordinates ingestion and per-question outcomes, `json_source.py`/`pdf.py` normalize sources, and `retrieval.py` encapsulates nodes, Chroma, and LlamaIndex. `providers.py` owns explicit paid models, prompts, concurrency, timeouts, retries, and safe errors. `contracts.py` contains public and evidence schemas. The UI submits both files to `/api/qa` once and renders the ordered response. Ingestion and cache reuse remain internal; there are no public document-management routes.
+
+Manual multipart parsing retains streamed body and part limits. OpenAPI explicitly declares the two required file fields and typed error envelopes for 400/413/415/422/500/502/503/504. Invalid questions fail before paid work. After successful ingestion, answering failures are per-question errors inside an HTTP 200 batch.
 
 LlamaIndex is on the execution path: its `TextNode`, `SentenceSplitter`, embedding adapter, `VectorStoreIndex`, Chroma integration, metadata filters, and retriever are used in tests and the runtime. The application explicitly generates the final answer so provider and citation policies stay in one place. Framework synchronous embedding hooks reject accidental calls; embeddings are prepared asynchronously before indexing or retrieval. No default LLM is instantiated.
 
@@ -29,7 +31,7 @@ PyMuPDF is imported only in the process worker. Each invocation opens and closes
 
 Document IDs hash source bytes and relevant parser/library/chunk/embedding/vision settings. Fake providers have a separate cache namespace. A per-document application lock prevents duplicate ingestion, and a process-wide storage file lock enforces the single-process deployment. LlamaIndex metadata filters and a separate Chroma collection per document enforce retrieval scope.
 
-The final atomic `ready.json` write records the configuration signature and public counts. Reuse checks the manifest and collection count; missing/invalid readiness is ignored. Failed work handled by the current request deletes its index and app-owned files. A crash may leave unready files until re-upload or reset. No reservations, index generations, startup staging recovery, retention daemon, or disk quota subsystem exists.
+The final atomic `ready.json` write records the configuration signature and document counts. Reuse checks the manifest and collection count; missing/invalid readiness is ignored. Every request still uploads both files; the content hash selects an existing ready index internally. Failed work handled by the current request deletes its index and app-owned files. A crash may leave unready files until re-upload or reset. No reservations, index generations, startup staging recovery, retention daemon, or disk quota subsystem exists.
 
 The on-disk cache is for the same local deployment; it is not a portable archival format or a multi-process service. The next deployment step would be server-backed Chroma and shared coordination, after adding authentication and lifecycle controls. The [Chroma client documentation](https://docs.trychroma.com/reference/python/client) describes the local and client/server choices.
 
