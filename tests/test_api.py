@@ -4,6 +4,7 @@ import sys
 
 import httpx
 import pytest
+import starlette.formparsers
 
 from docwiki.app import create_app
 from docwiki.config import Settings
@@ -192,6 +193,36 @@ async def test_malformed_multipart_returns_400(client, content_type, body):
     assert response.status_code == 400
     assert ErrorResponse.model_validate(response.json()).error.code == "invalid_upload"
     assert provider.embedding_calls == provider.answer_calls == 0
+
+
+@pytest.mark.parametrize("ending", [b"", b"\r\n--test\r\n"])
+async def test_incomplete_multipart_is_rejected_before_provider_work(client, ending, monkeypatch):
+    http, provider, _ = client
+    temporary_files = []
+    create_file = starlette.formparsers.SpooledTemporaryFile
+
+    def tracked_file(*args, **kwargs):
+        file = create_file(*args, **kwargs)
+        temporary_files.append(file)
+        return file
+
+    monkeypatch.setattr(starlette.formparsers, "SpooledTemporaryFile", tracked_file)
+    body = (
+        b'--test\r\nContent-Disposition: form-data; name="document_file"; '
+        b'filename="source.json"\r\nContent-Type: application/json\r\n\r\n'
+        b'{"cloud":"ExampleCloud"}\r\n'
+        b'--test\r\nContent-Disposition: form-data; name="questions_file"; '
+        b'filename="questions.json"\r\nContent-Type: application/json\r\n\r\n'
+        b'["Cloud?"]' + ending
+    )
+    response = await http.post(
+        "/api/qa", headers={"content-type": "multipart/form-data; boundary=test"}, content=body
+    )
+    assert response.status_code == 400
+    assert ErrorResponse.model_validate(response.json()).error.code == "invalid_upload"
+    assert provider.embedding_calls == provider.answer_calls == 0
+    assert len(temporary_files) == 2
+    assert all(file.closed for file in temporary_files)
 
 
 @pytest.mark.parametrize("status", [500, 502, 503, 504])

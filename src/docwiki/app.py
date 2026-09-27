@@ -10,8 +10,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.datastructures import UploadFile
-from starlette.exceptions import HTTPException
+from starlette.datastructures import FormData, UploadFile
+from starlette.formparsers import MultiPartException, MultiPartParser
 
 from docwiki.config import Settings
 from docwiki.contracts import BatchResponse, ErrorResponse, ResultError, normalize_questions
@@ -186,15 +186,40 @@ def error_schemas():
     }
 
 
+class UploadParser(MultiPartParser):
+    completed = False
+
+    def on_end(self) -> None:
+        self.completed = True
+
+    async def parse(self) -> FormData:
+        stream = self.stream
+
+        async def checked_stream():
+            async for chunk in stream:
+                yield chunk
+            if not self.completed:
+                raise MultiPartException("Incomplete multipart data.")
+
+        self.stream = checked_stream()
+        return await super().parse()
+
+
 async def read_uploads(request: Request, settings: Settings):
     expected = {"document_file", "questions_file"}
     content_type = request.headers.get("content-type", "").partition(";")[0].strip().lower()
     if content_type != "multipart/form-data":
         raise AppError("invalid_upload", "Use multipart/form-data with both uploaded files.", 400)
     try:
-        async with request.form(
-            max_files=len(expected), max_fields=0, max_part_size=settings.document_bytes
-        ) as form:
+        parser = UploadParser(
+            request.headers,
+            request.stream(),
+            max_files=len(expected),
+            max_fields=0,
+            max_part_size=settings.document_bytes,
+        )
+        form = await parser.parse()
+        try:
             if set(form) != expected or len(form.multi_items()) != len(expected):
                 raise AppError("invalid_upload", "Supply exactly the documented file fields.")
             data = {}
@@ -242,8 +267,10 @@ async def read_uploads(request: Request, settings: Settings):
                 if name == "document_file":
                     source_type = "pdf" if suffix == ".pdf" else "json"
             return data, source_type
-    except HTTPException as exc:
-        if str(exc.detail).startswith(("Too many files.", "Too many fields.")):
+        finally:
+            await form.close()
+    except MultiPartException as exc:
+        if exc.message.startswith(("Too many files.", "Too many fields.")):
             raise AppError("invalid_upload", "Supply exactly the documented file fields.") from None
         raise AppError("invalid_upload", "Malformed multipart encoding.", 400) from None
 
