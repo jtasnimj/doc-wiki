@@ -258,7 +258,9 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
         async def operation():
             service = request.app.state.service
             info = await service.ingest(files["document_file"], kind)
-            return await service.questions(info.document_id, questions, request.state.deadline)
+            return await service.questions(
+                info.document_id, questions, request.state.deadline, ready_document=info
+            )
 
         return await connected_work(request, operation())
 

@@ -16,6 +16,8 @@ async def test_pdf_rejection_limits_and_partial_coverage(tmp_path):
     )
     assert await process.wait() == 0
     extractor = PDFExtractor(Settings())
+    short = await extractor.extract(tmp_path / "short.pdf")
+    assert any("Cloud: ExampleCloud." in block.text for block in short.blocks)
     for name, code in [
         ("blank", "no_usable_text"),
         ("encrypted", "encrypted_pdf"),

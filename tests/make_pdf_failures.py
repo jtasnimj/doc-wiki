@@ -5,6 +5,10 @@ import pymupdf
 
 root = Path(sys.argv[1])
 with pymupdf.open() as doc:
+    page = doc.new_page()
+    page.insert_text((50, 50), "Cloud: ExampleCloud.")
+    doc.save(root / "short.pdf")
+with pymupdf.open() as doc:
     doc.new_page()
     doc.save(root / "blank.pdf")
     doc[0].insert_text((50, 50), "Enough readable text to demonstrate the coverage warning.")

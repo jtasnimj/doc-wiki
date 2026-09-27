@@ -2,15 +2,18 @@ import asyncio
 import json
 import sys
 import threading
+import time
 
 import httpx
 import pytest
 
 from docwiki.app import create_app
 from docwiki.config import Settings
+from docwiki.contracts import Question
 from docwiki.errors import AppError
 from docwiki.json_source import extract_json
 from docwiki.pdf import PDFExtractor
+from docwiki.service import QAService
 from tests.fakes import FakeProvider
 
 
@@ -89,3 +92,28 @@ async def test_slow_store_read_cannot_erase_completed_batch_answer(tmp_path):
                 assert not release.is_set()
         finally:
             release.set()
+
+
+async def test_expired_answering_deadline_after_ready_ingestion_returns_results(tmp_path):
+    provider = FakeProvider()
+    service = QAService(Settings(data_dir=tmp_path, embedding_dimensions=64), provider)
+    await service.start()
+    try:
+        document = await service.ingest(b'{"cloud":"ExampleCloud"}', "json")
+        embedding_calls = provider.embedding_calls
+
+        def no_redundant_lookup(*args):
+            raise AssertionError("Readiness was already established by ingestion")
+
+        service.store.ready = no_redundant_lookup
+        result = await service.questions(
+            document.document_id,
+            [Question(id="q", question="Cloud?")],
+            time.monotonic() - 1,
+            ready_document=document,
+        )
+        assert result.batch_status == "failed"
+        assert result.results[0].error.code == "request_timeout"
+        assert provider.embedding_calls == embedding_calls
+    finally:
+        await service.close()

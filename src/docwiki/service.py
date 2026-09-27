@@ -199,9 +199,16 @@ class QAService:
         return extraction
 
     async def questions(
-        self, doc_id: str, questions: list[Question], deadline: float
+        self,
+        doc_id: str,
+        questions: list[Question],
+        deadline: float,
+        *,
+        ready_document: DocumentInfo | None = None,
     ) -> BatchResponse:
-        info = await self.store.run(self.store.ready, doc_id)
+        # The canonical route already established readiness. Avoid re-entering the
+        # storage queue after ingestion consumed most of this request's deadline.
+        info = ready_document or await self.store.run(self.store.ready, doc_id)
         if info is None:
             raise AppError(
                 "document_not_found", "No ready index exists for this document/configuration.", 404
@@ -212,6 +219,11 @@ class QAService:
 
         async def one(question: Question):
             try:
+                if time.monotonic() >= deadline - 0.05:
+                    return failed(
+                        question,
+                        AppError("request_timeout", "Question exceeded the request deadline.", 504),
+                    )
                 embedding = await self.store.embedder.aget_query_embedding(question.question)
                 evidence = await self.store.run(
                     self.store.retrieve,

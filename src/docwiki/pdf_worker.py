@@ -72,7 +72,7 @@ def extract(path: str, options: dict) -> dict:
                     # Continuation pages often start with short data that looks like a
                     # header. Preserve every row unless there is positive header evidence.
                     unknown_headers.append(page.number + 1)
-                if not rows:
+                if not rows or not any(cell.strip() for row in rows for cell in row):
                     continue
                 rects.append(pymupdf.Rect(table.bbox))
                 page_blocks.append(
@@ -141,7 +141,7 @@ def extract(path: str, options: dict) -> dict:
             total += sum(len(b["text"].encode()) for b in page_blocks)
             if total > options["extracted_bytes"]:
                 raise ValueError("extracted_limit")
-        if not blocks or all(p in skipped for p in range(1, len(doc) + 1)):
+        if not blocks:
             raise ValueError("no_usable_text")
         if skipped:
             warnings.append(
