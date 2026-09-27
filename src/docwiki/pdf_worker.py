@@ -1,0 +1,143 @@
+"""Process-only PyMuPDF adapter. No imports from API, providers or vector storage."""
+
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+import pymupdf
+
+
+def extract(path: str, options: dict) -> dict:
+    blocks, warnings, skipped, candidates = [], [], [], []
+    total = 0
+    with pymupdf.open(path) as doc:
+        if doc.needs_pass:
+            raise ValueError("encrypted_pdf")
+        if not 0 < len(doc) <= options["pdf_pages"]:
+            raise ValueError("pdf_page_limit")
+        # Repeated images are usually logos/banners, not unique diagrams.
+        image_pages: dict[int, set[int]] = {}
+        for page in doc:
+            for img in page.get_images():
+                image_pages.setdefault(img[0], set()).add(page.number)
+        for page in doc:
+            page_blocks: list[dict[str, Any]] = []
+            tables = page.find_tables().tables
+            rects = [pymupdf.Rect(t.bbox) for t in tables]
+            for table in tables:
+                rows = [[cell or "" for cell in row] for row in table.extract()]
+                headers = [name or f"Column {i + 1}" for i, name in enumerate(table.header.names)]
+                if rows and not table.header.external:
+                    rows = rows[1:]
+                if not rows:
+                    continue
+                page_blocks.append(
+                    dict(
+                        text="\n".join(" | ".join(row) for row in [headers, *rows]),
+                        kind="pdf",
+                        location={"page": page.number + 1, "bbox": list(table.bbox)},
+                        method="pymupdf-table",
+                        header=headers,
+                        rows=rows,
+                    )
+                )
+            for block in page.get_text("dict", flags=pymupdf.TEXTFLAGS_TEXT, sort=True)["blocks"]:
+                if block["type"] != 0:
+                    continue
+                lines = []
+                for line in block["lines"]:
+                    spans = []
+                    for span in line["spans"]:
+                        x0, y0, x1, y1 = span["bbox"]
+                        if not any(pymupdf.Point((x0 + x1) / 2, (y0 + y1) / 2) in r for r in rects):
+                            spans.append(span["text"])
+                    if spans:
+                        lines.append(" ".join(spans))
+                text = "\n".join(lines).strip()
+                if text:
+                    page_blocks.append(
+                        dict(
+                            text=text,
+                            kind="pdf",
+                            location={"page": page.number + 1, "bbox": block["bbox"]},
+                            method="pymupdf-text",
+                            section=text if len(text) < 100 else None,
+                        )
+                    )
+            usable = sum(len(b["text"].strip()) for b in page_blocks)
+            if usable < 30:
+                skipped.append(page.number + 1)
+            # Text density alone misses diagrams embedded in narrative pages.
+            visual_rects = []
+            for img in page.get_images():
+                if len(image_pages[img[0]]) == 1:
+                    visual_rects.extend(page.get_image_rects(img[0]))
+            drawings = page.get_drawings()
+            if drawings:
+                visual_rects.extend(page.cluster_drawings(drawings=drawings))
+            visual_rects = [
+                r
+                for r in visual_rects
+                if r.get_area() > page.rect.get_area() * 0.07
+                and not any((r & t).get_area() > r.get_area() * 0.5 for t in rects)
+            ]
+            if visual_rects:
+                # One page-level crop preserves relationships between vector/raster parts.
+                region = pymupdf.Rect(visual_rects[0])
+                for rect in visual_rects[1:]:
+                    region |= rect
+                candidates.append({"page": page.number + 1, "bbox": list(region & page.rect)})
+            blocks.extend(page_blocks)
+            total += sum(len(b["text"].encode()) for b in page_blocks)
+            if total > options["extracted_bytes"]:
+                raise ValueError("extracted_limit")
+        if not blocks or all(p in skipped for p in range(1, len(doc) + 1)):
+            raise ValueError("no_usable_text")
+        if skipped:
+            warnings.append(
+                "Limited text coverage on PDF pages: "
+                + ", ".join(map(str, skipped))
+                + ". OCR is disabled."
+            )
+        if candidates:
+            warnings.append(
+                "Potential figure content on PDF pages: "
+                + ", ".join(str(c["page"]) for c in candidates)
+                + ". Text/table extraction may omit visual relationships."
+            )
+        return dict(
+            blocks=blocks,
+            page_count=len(doc),
+            warnings=warnings,
+            visual_candidates=candidates,
+            skipped_pages=skipped,
+        )
+
+
+def render(path: str, options: dict) -> dict:
+    outputs = []
+    with pymupdf.open(path) as doc:
+        for i, loc in enumerate(options["locations"][:3]):
+            page = doc[loc["page"] - 1]
+            clip = pymupdf.Rect(loc["bbox"]) if loc.get("bbox") else page.rect
+            clip &= page.rect
+            scale = min(2, (4_000_000 / max(clip.get_area(), 1)) ** 0.5)
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), clip=clip, alpha=False)
+            dest = Path(options["output_dir"]) / f"crop-{i}.png"
+            pix.save(dest)
+            outputs.append({"location": loc, "path": str(dest)})
+    return {"images": outputs}
+
+
+if __name__ == "__main__":
+    source, destination, raw_options = sys.argv[1:]
+    options = json.loads(raw_options)
+    try:
+        result = render(source, options) if options.get("render") else extract(source, options)
+    except ValueError as exc:
+        known = {"encrypted_pdf", "pdf_page_limit", "extracted_limit", "no_usable_text"}
+        result = {"error": str(exc) if str(exc) in known else "invalid_pdf"}
+    except Exception:
+        result = {"error": "invalid_pdf"}
+    Path(destination).write_text(json.dumps(result), encoding="utf-8")
