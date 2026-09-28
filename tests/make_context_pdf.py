@@ -14,12 +14,15 @@ with pymupdf.open() as document:
         page.draw_line((x, 320), (x, 400))
     for y in (320, 360, 400):
         page.draw_line((50, y), (450, y))
-    for x, y, text in [
+    cells = [
         (60, 345, "Finding"),
         (240, 345, "Requirement"),
         (60, 385, "Not examined"),
         (240, 385, "Maintain cooling"),
-    ]:
+    ]
+    for x, y, text in cells:
+        if len(sys.argv) > 2 and sys.argv[2] == "reverse":
+            x = 240 if x == 60 else 60
         page.insert_text((x, y), text, fontname="hebo" if y == 345 else "helv")
     page = document.new_page()
     page.insert_text((50, 65), "Unrelated page without a heading.", fontsize=11)

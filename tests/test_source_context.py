@@ -1,14 +1,19 @@
 import asyncio
 import sys
 
+import pytest
+
 from docwiki.config import Settings
 from docwiki.pdf import PDFExtractor
 
 
-async def test_pdf_preserves_verified_heading_scope_and_table_header_provenance(tmp_path):
+@pytest.mark.parametrize("column_order", ["original", "reverse"])
+async def test_pdf_preserves_verified_heading_scope_and_table_header_provenance(
+    tmp_path, column_order
+):
     path = tmp_path / "context.pdf"
     process = await asyncio.create_subprocess_exec(
-        sys.executable, "tests/make_context_pdf.py", str(path)
+        sys.executable, "tests/make_context_pdf.py", str(path), column_order
     )
     assert await process.wait() == 0
     extraction = await PDFExtractor(Settings()).extract(path)
@@ -21,7 +26,12 @@ async def test_pdf_preserves_verified_heading_scope_and_table_header_provenance(
     assert [(c.text, c.location.page) for c in meter.context] == [("Equipment records", 1)]
     assert meter.context[0].block_id == meter.parent_id
     table = next(b for b in blocks if b.rows)
-    assert table.header == ["Finding", "Requirement"]
+    expected = ["Finding", "Requirement"]
+    assert table.header == (expected if column_order == "original" else expected[::-1])
+    assert dict(zip(table.header, table.rows[0], strict=True)) == {
+        "Finding": "Not examined",
+        "Requirement": "Maintain cooling",
+    }
     assert table.header_location.page == 1
     assert table.header_location.bbox != table.location.bbox
     assert [c.text for c in table.context] == ["Supplier responsibilities"]

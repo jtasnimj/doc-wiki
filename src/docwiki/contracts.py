@@ -109,6 +109,7 @@ class Evidence(BaseModel):
     context: list[SourceContext] = Field(default_factory=list)
     header_location: Location | None = None
     image_ref: str | None = None
+    retrieval_role: Literal["seed", "context"] = "seed"
 
 
 class Citation(BaseModel):

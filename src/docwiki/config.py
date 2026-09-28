@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     evidence_tokens: int = Field(6000, gt=0)
     context_neighbors: bool = True
     contextual_embeddings: bool = False
+    question_planning: bool = False
     provider_concurrency: int = Field(4, ge=1, le=16)
     provider_timeout: float = Field(30, gt=0)
     extraction_timeout: float = Field(90, gt=0)

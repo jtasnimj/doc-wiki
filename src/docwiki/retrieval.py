@@ -231,7 +231,7 @@ class IndexStore:
                             and neighbor.kind == seed.kind
                             and neighbor.location.page == seed.location.page
                         ):
-                            include(neighbor)
+                            include(neighbor.model_copy(update={"retrieval_role": "context"}))
         event(
             "retrieval_complete",
             document_id=doc_id,

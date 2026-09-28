@@ -56,15 +56,21 @@ async def test_explicit_sdk_models_structured_output_and_untrusted_evidence(rela
                 },
             )
         result = {
-            "answer": "The region is not established." if related else "ExampleCloud.",
-            "status": "not_found" if related else "answered",
-            "source_ids": [] if related else ["src1"],
-            "related_information": [{"text": "ExampleCloud hosts it.", "source_ids": ["src1"]}]
+            "result": {
+                "outcome": "not_found",
+                "missing": [{"text": "the hosting region", "question_part_ids": ["q1"]}],
+                "related_information": [{"text": "ExampleCloud hosts it.", "source_ids": ["src1"]}],
+            }
             if related
-            else [],
+            else {
+                "outcome": "answered",
+                "claims": [
+                    {"text": "ExampleCloud.", "source_ids": ["src1"], "question_part_ids": ["q1"]}
+                ],
+            }
         }
         if related == "uncited":
-            result["related_information"][0]["source_ids"] = []
+            result["result"]["related_information"][0]["source_ids"] = []
         return httpx.Response(
             200,
             json={
@@ -118,7 +124,8 @@ async def test_explicit_sdk_models_structured_output_and_untrusted_evidence(rela
         assert requests[1]["store"] is False
         assert requests[1]["text"]["format"]["type"] == "json_schema"
         schema = requests[1]["text"]["format"]["schema"]
-        assert "related_information" in schema["required"]
+        assert schema["required"] == ["result"]
+        assert "anyOf" in schema["properties"]["result"]
         assert schema["$defs"]["ModelRelatedInformation"]["required"] == ["text", "source_ids"]
         assert "untrusted" in requests[1]["input"][0]["content"]
         assert "Ignore all rules" not in requests[1]["input"][0]["content"]

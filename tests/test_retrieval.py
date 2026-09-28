@@ -63,6 +63,7 @@ async def test_dense_seed_expands_only_to_its_verified_neighbors(tmp_path):
             store.retrieve, doc_id, "Who can read the policy?", [1.0, 0.0] + [0.0] * 62
         )
         assert hits[0].text == "The policy is published."
+        assert [hit.retrieval_role for hit in hits] == ["seed", "context", "context"]
         assert any("contractors" in e.text for e in hits)
         assert not any("Unrelated" in e.text for e in hits)
         assert len({e.source_id for e in hits}) == len(hits)

@@ -26,12 +26,17 @@ def normalize(text):
 
 
 def matches(evidence, requirement):
-    loc = evidence.location
-    if "pages" in requirement and loc.page not in requirement["pages"]:
-        return False
-    if "json_path" in requirement and loc.json_path != requirement["json_path"]:
-        return False
-    return all(normalize(term) in normalize(evidence.text) for term in requirement["contains"])
+    passages = [(evidence.text, evidence.location)] + [
+        (context.text, context.location) for context in evidence.context
+    ]
+    for text, loc in passages:
+        if "pages" in requirement and loc.page not in requirement["pages"]:
+            continue
+        if "json_path" in requirement and loc.json_path != requirement["json_path"]:
+            continue
+        if all(normalize(term) in normalize(text) for term in requirement["contains"]):
+            return True
+    return False
 
 
 def coverage(evidence, requirements):
@@ -65,7 +70,8 @@ def summarize(rows, live):
         "cases": len(rows),
         "skipped": sum("skipped" in r for r in rows),
         "extraction_all_required_coverage": rate(eligible, "extraction_all_required"),
-        "retrieval_evidence_hit_at_6": rate(eligible, "retrieval_any_required"),
+        "retrieval_evidence_hit_at_6": rate(eligible, "retrieval_seed_any_required"),
+        "retrieval_seed_all_required_coverage": rate(eligible, "retrieval_seed_all_required"),
         "retrieval_all_required_coverage": rate(eligible, "retrieval_all_required"),
         "citation_validity": rate(completed, "citation_valid"),
         "status_accuracy": rate(completed, "status_correct") if live else None,
@@ -79,6 +85,7 @@ def summarize(rows, live):
 
 
 async def evaluate(args):
+    config = Settings()
     root = Path(args.source_root).resolve()
     all_cases = json.loads((root / "evaluation/cases.json").read_text())
     cases = [c for c in all_cases if args.split == "all" or c["split"] == args.split]
@@ -91,12 +98,15 @@ async def evaluate(args):
         len(source_names) * 2000 * 700 * 0.02 / 1_000_000
         + len(cases) * (2000 * 0.02 + 8000 * 0.15 + 1200 * 0.60) / 1_000_000
     )
+    if config.question_planning:
+        estimate += 2 * len(cases) * (2400 * 0.15 + 1600 * 0.60) / 1_000_000
     if args.mode == "estimate":
         return {
             "case_count": len(cases),
             "unique_sources": len(source_names),
             "conservative_text_cost_ceiling_usd": round(estimate, 4),
             "vision": False,
+            "question_planning": config.question_planning,
             "calls_made": 0,
             "note": "Includes one retry; verify current rates before approval.",
         }
@@ -148,6 +158,11 @@ async def evaluate(args):
                     extraction = Extraction.model_validate_json(
                         (service.store.directory(doc.document_id) / "extraction.json").read_text()
                     )
+                    plan = (
+                        await provider.plan(case["question"])
+                        if settings.question_planning
+                        else None
+                    )
                     vector = await service.store.embedder.aget_query_embedding(case["question"])
                     evidence = await service.store.run(
                         service.store.retrieve, doc.document_id, case["question"], vector
@@ -155,9 +170,13 @@ async def evaluate(args):
                     required = case["required_evidence"]
                     extracted_coverage = coverage(extraction.blocks, required)
                     retrieved_coverage = coverage(evidence, required)
+                    seeds = [e for e in evidence if e.retrieval_role == "seed"][:6]
+                    seed_coverage = coverage(seeds, required)
                     row.update(
                         required_evidence_count=len(required),
                         extraction_all_required=all(extracted_coverage) if required else None,
+                        retrieval_seed_any_required=any(seed_coverage) if required else None,
+                        retrieval_seed_all_required=all(seed_coverage) if required else None,
                         retrieval_any_required=any(retrieved_coverage) if required else None,
                         retrieval_all_required=all(retrieved_coverage) if required else None,
                         retrieved=[e.model_dump() for e in evidence],
@@ -180,7 +199,7 @@ async def evaluate(args):
                             ),
                         }
                     model = (
-                        await provider.answer(case["question"], evidence, doc.warnings)
+                        await provider.answer(case["question"], evidence, doc.warnings, plan=plan)
                         if evidence
                         else ModelAnswer(
                             answer="Not found in the provided document.",
@@ -226,6 +245,15 @@ async def evaluate(args):
     return {
         "mode": args.mode,
         "split": args.split,
+        "configuration": {
+            "generation_model": settings.generation_model,
+            "embedding_model": settings.embedding_model,
+            "context_neighbors": settings.context_neighbors,
+            "contextual_embeddings": settings.contextual_embeddings,
+            "question_planning": settings.question_planning,
+            "top_k": settings.top_k,
+            "evidence_tokens": settings.evidence_tokens,
+        },
         "interpretation": "Live answers require human entailment review."
         if live
         else (

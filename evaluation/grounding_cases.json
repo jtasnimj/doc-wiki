@@ -338,6 +338,174 @@
       "forbidden_claims": [
         "Backups are stored in the USA"
       ]
+    },
+    {
+      "id": "pair_actor_supplier",
+      "split": "dev",
+      "question": "Do clinic staff calibrate meters?",
+      "source": {
+        "policy": "A service vendor calibrates meters."
+      },
+      "expected_status": "not_found",
+      "expected_answer": "The evidence does not establish whether clinic staff calibrate meters.",
+      "related_text": "A service vendor calibrates meters.",
+      "forbidden_claims": [
+        "Clinic staff calibrate meters"
+      ]
+    },
+    {
+      "id": "pair_actor_staff",
+      "split": "dev",
+      "question": "Do clinic staff calibrate meters?",
+      "source": {
+        "policy": "Clinic staff calibrate meters."
+      },
+      "expected_status": "answered",
+      "expected_answer": "Yes. Clinic staff calibrate meters.",
+      "related_text": null,
+      "forbidden_claims": [
+        "A vendor performs calibration"
+      ]
+    },
+    {
+      "id": "pair_time_unbounded",
+      "split": "dev",
+      "question": "Are recall notices issued within 12 hours?",
+      "source": {
+        "policy": "Recall notices are issued promptly."
+      },
+      "expected_status": "not_found",
+      "expected_answer": "The evidence does not establish a 12-hour deadline for recall notices.",
+      "related_text": "Recall notices are issued promptly.",
+      "forbidden_claims": [
+        "Notices are issued within 12 hours"
+      ]
+    },
+    {
+      "id": "pair_time_bounded",
+      "split": "dev",
+      "question": "Are recall notices issued within 12 hours?",
+      "source": {
+        "policy": "Recall notices are issued within 12 hours."
+      },
+      "expected_status": "answered",
+      "expected_answer": "Yes. Recall notices are issued within 12 hours.",
+      "related_text": null,
+      "forbidden_claims": [
+        "The deadline is 24 hours"
+      ]
+    },
+    {
+      "id": "pair_scope_general",
+      "split": "dev",
+      "question": "Are cryogenic specimens tracked in the inventory?",
+      "source": {
+        "policy": "The laboratory maintains an inventory of supplies."
+      },
+      "expected_status": "not_found",
+      "expected_answer": "The evidence does not establish cryogenic specimen coverage.",
+      "related_text": "The laboratory maintains an inventory of supplies.",
+      "forbidden_claims": [
+        "Cryogenic specimens are covered"
+      ]
+    },
+    {
+      "id": "pair_scope_specific",
+      "split": "dev",
+      "question": "Are cryogenic specimens tracked in the inventory?",
+      "source": {
+        "policy": "The laboratory inventory includes all cryogenic specimens."
+      },
+      "expected_status": "answered",
+      "expected_answer": "Yes. All cryogenic specimens are included.",
+      "related_text": null,
+      "forbidden_claims": [
+        "Specimens are excluded"
+      ]
+    },
+    {
+      "id": "pair_polarity_yes",
+      "split": "dev",
+      "question": "Does the irrigation controller shut down after three sensor faults?",
+      "source": {
+        "policy": "The irrigation controller shuts down after three sensor faults."
+      },
+      "expected_status": "answered",
+      "expected_answer": "Yes. It shuts down after three sensor faults.",
+      "related_text": null,
+      "forbidden_claims": [
+        "It does not shut down"
+      ]
+    },
+    {
+      "id": "pair_polarity_no",
+      "split": "dev",
+      "question": "Does the irrigation controller shut down after three sensor faults?",
+      "source": {
+        "policy": "The irrigation controller does not shut down after three sensor faults."
+      },
+      "expected_status": "answered",
+      "expected_answer": "No. It does not shut down after three sensor faults.",
+      "related_text": null,
+      "forbidden_claims": [
+        "It shuts down after three faults"
+      ]
+    },
+    {
+      "id": "pair_applicability_silent",
+      "split": "dev",
+      "question": "Does the cold-storage checklist apply to the seed archive?",
+      "source": {
+        "policy": "The seed archive labels all containers."
+      },
+      "expected_status": "not_found",
+      "expected_answer": "The evidence does not establish whether the cold-storage checklist applies.",
+      "related_text": null,
+      "forbidden_claims": [
+        "The checklist is not applicable"
+      ]
+    },
+    {
+      "id": "pair_applicability_excluded",
+      "split": "dev",
+      "question": "Does the cold-storage checklist apply to the seed archive?",
+      "source": {
+        "policy": "The cold-storage checklist explicitly excludes the seed archive."
+      },
+      "expected_status": "answered",
+      "expected_answer": "No. The checklist explicitly excludes the seed archive.",
+      "related_text": null,
+      "forbidden_claims": [
+        "The checklist applies"
+      ]
+    },
+    {
+      "id": "pair_alternative_choice",
+      "split": "dev",
+      "question": "Must operators record faults or notify the duty officer?",
+      "source": {
+        "policy": "Operators must either record faults or notify the duty officer; either action satisfies the procedure."
+      },
+      "expected_status": "answered",
+      "expected_answer": "Yes. Either recording faults or notifying the duty officer satisfies the procedure.",
+      "related_text": null,
+      "forbidden_claims": [
+        "Both actions are required"
+      ]
+    },
+    {
+      "id": "pair_alternative_both",
+      "split": "dev",
+      "question": "Must operators record faults or notify the duty officer?",
+      "source": {
+        "policy": "Operators must both record faults and notify the duty officer."
+      },
+      "expected_status": "answered",
+      "expected_answer": "The procedure requires both actions; choosing only one does not satisfy it.",
+      "related_text": null,
+      "forbidden_claims": [
+        "Either action alone satisfies the procedure"
+      ]
     }
   ]
 }

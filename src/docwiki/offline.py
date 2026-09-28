@@ -5,6 +5,7 @@ import math
 import re
 
 from docwiki.contracts import ModelAnswer
+from docwiki.grounding import whole_question
 
 
 class FakeProvider:
@@ -13,6 +14,7 @@ class FakeProvider:
     def __init__(self):
         self.embedding_calls = 0
         self.answer_calls = 0
+        self.plan_calls = 0
         self.answers = {}
 
     async def embed(self, texts):
@@ -27,7 +29,11 @@ class FakeProvider:
             vectors.append([x / norm for x in vector])
         return vectors
 
-    async def answer(self, question, evidence, warnings):
+    async def plan(self, question):
+        self.plan_calls += 1
+        return whole_question(question)
+
+    async def answer(self, question, evidence, warnings, *, plan=None):
         self.answer_calls += 1
         if question in self.answers:
             value = self.answers[question]

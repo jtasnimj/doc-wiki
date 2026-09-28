@@ -235,6 +235,11 @@ class QAService:
                         question,
                         AppError("request_timeout", "Question exceeded the request deadline.", 504),
                     )
+                plan = (
+                    await self.provider.plan(question.question)
+                    if self.settings.question_planning
+                    else None
+                )
                 embedding = await self.store.embedder.aget_query_embedding(question.question)
                 evidence = await self.store.run(
                     self.store.retrieve,
@@ -249,7 +254,13 @@ class QAService:
                         status="not_found",
                         answer="Not found in the provided document.",
                     )
-                answer = await self.provider.answer(question.question, evidence, info.warnings)
+                answer = (
+                    await self.provider.answer(
+                        question.question, evidence, info.warnings, plan=plan
+                    )
+                    if plan is not None
+                    else await self.provider.answer(question.question, evidence, info.warnings)
+                )
                 return validate_answer(question, answer, evidence)
             except AppError as exc:
                 return failed(question, exc)

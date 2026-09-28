@@ -29,9 +29,16 @@ async def test_json_logs_capture_request_cache_provider_usage_without_sensitive_
             )
         evidence = json.loads(payload["input"][1]["content"][0]["text"])["evidence"]
         result = {
-            "answer": "PRIVATE_ANSWER",
-            "status": "answered",
-            "source_ids": [evidence[0]["source_id"]],
+            "result": {
+                "outcome": "answered",
+                "claims": [
+                    {
+                        "text": "PRIVATE_ANSWER",
+                        "source_ids": [evidence[0]["source_id"]],
+                        "question_part_ids": ["q1"],
+                    }
+                ],
+            }
         }
         return httpx.Response(
             200,
@@ -114,6 +121,11 @@ async def test_json_logs_capture_request_cache_provider_usage_without_sensitive_
     assert [event["index_cache_hit"] for event in ingestion] == [False, True]
     assert all(event["document_id"] == first.json()["document_id"] for event in ingestion)
     assert ingestion[0]["latency_ms"] >= 0 and ingestion[0]["chunk_count"] > 0
+    retrieval = [event for event in events if event["event"] == "retrieval_complete"]
+    assert len(retrieval) == 2
+    assert all(event["seed_count"] == 1 and event["context_count"] == 0 for event in retrieval)
+    assert all(0 < event["evidence_tokens"] <= settings.evidence_tokens for event in retrieval)
+    assert all(event["latency_ms"] >= 0 for event in retrieval)
     providers = [event for event in events if event["event"] == "provider_complete"]
     assert {event["model"] for event in providers} == {"gpt-4o-mini", "text-embedding-3-small"}
     assert all(event["provider"] == "openai" and event["retries"] == 0 for event in providers)
