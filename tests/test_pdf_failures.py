@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from docwiki.config import Settings
-from docwiki.errors import AppError
-from docwiki.pdf import PDFExtractor
+from doc_wiki.config import Settings
+from doc_wiki.errors import AppError
+from doc_wiki.pdf import PDFExtractor
 
 
 async def test_pdf_rejection_limits_and_partial_coverage(tmp_path):

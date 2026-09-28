@@ -5,8 +5,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from docwiki.contracts import Evidence
-from docwiki.eval import coverage
+from doc_wiki.contracts import Evidence
+from doc_wiki.eval import coverage
 
 
 def review(baseline, manifest):
@@ -102,7 +102,7 @@ def render_html(report):
     parts = [
         "<!doctype html><html lang='en'><meta charset='utf-8'>",
         "<meta name='viewport' content='width=device-width,initial-scale=1'>",
-        "<title>DocWiki: 19-case baseline review</title>",
+        "<title>doc-wiki: 19-case baseline review</title>",
         "<style>body{font:14px/1.5 system-ui;margin:28px;color:#193732}"
         "table{border-collapse:collapse;min-width:1800px}th,td{border:1px solid #ccd8d0;"
         "padding:12px;vertical-align:top;min-width:200px}th{background:#e9f0e9;text-align:left}"

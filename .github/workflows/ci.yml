@@ -12,18 +12,18 @@ jobs:
       - run: uv sync --frozen --group dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run mypy src/docwiki
+      - run: uv run mypy src/doc_wiki
       - run: uv run pytest -m "not live"
-      - run: uv run python -m docwiki.eval --mode offline
-      - run: docker build -t docwiki:ci .
+      - run: uv run python -m doc_wiki.eval --mode offline
+      - run: docker build -t doc-wiki:ci .
       - name: Container liveness without an API key
         run: |
-          docker run -d --name docwiki-ci -p 127.0.0.1:8000:8000 docwiki:ci
+          docker run -d --name doc-wiki-ci -p 127.0.0.1:8000:8000 doc-wiki:ci
           for attempt in $(seq 1 30); do
             if curl --fail http://127.0.0.1:8000/healthz; then exit 0; fi
             sleep 1
           done
-          docker logs docwiki-ci
+          docker logs doc-wiki-ci
           exit 1
       - if: always()
-        run: docker rm -f docwiki-ci || true
+        run: docker rm -f doc-wiki-ci || true

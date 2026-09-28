@@ -5,10 +5,10 @@ import logging
 import httpx
 import openai
 
-from docwiki.app import create_app
-from docwiki.config import Settings
-from docwiki.observability import JSONFormatter, logger
-from docwiki.providers import OpenAIProvider
+from doc_wiki.app import create_app
+from doc_wiki.config import Settings
+from doc_wiki.observability import JSONFormatter, logger
+from doc_wiki.providers import OpenAIProvider
 
 
 async def test_json_logs_capture_request_cache_provider_usage_without_sensitive_content(tmp_path):

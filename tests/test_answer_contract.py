@@ -4,10 +4,10 @@ import httpx
 import openai
 import pytest
 
-from docwiki.config import Settings
-from docwiki.contracts import Evidence, Location
-from docwiki.errors import AppError
-from docwiki.providers import OpenAIProvider
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Evidence, Location
+from doc_wiki.errors import AppError
+from doc_wiki.providers import OpenAIProvider
 
 
 def sdk_response(result):
@@ -256,7 +256,7 @@ async def test_invalid_answer_combinations_and_references_are_errors_without_rep
 
 
 async def test_answer_must_account_for_every_part_of_a_validated_question_plan():
-    from docwiki.grounding import PlanEnvelope, compile_question_plan
+    from doc_wiki.grounding import PlanEnvelope, compile_question_plan
 
     question = "Are alarms logged and retained for 21 days?"
     plan = compile_question_plan(

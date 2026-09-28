@@ -7,8 +7,8 @@ The implementer inspected the sources, including rendered PDF pages 15 and 31, n
 ## Reproduce
 
 ```bash
-uv run python -m docwiki.eval --mode offline --split dev
-uv run python -m docwiki.eval --mode offline --split heldout
+uv run python -m doc_wiki.eval --mode offline --split dev
+uv run python -m doc_wiki.eval --mode offline --split heldout
 ```
 
 The default `--split all` runs all 18. The evaluator uses a temporary data directory, real normalization/chunking/indexing/retrieval, and deterministic fake providers. It verifies hashes before running a case. The original PDF belongs at `instructions/Nave-SOC2-Type-2-Report.pdf`; without it, seven development cases are explicitly skipped. CI therefore runs the 11 distributable cases unless the original is separately supplied. A hash mismatch is also reported as a skip requiring renewed source review, never silently treated as the same source.
@@ -70,7 +70,7 @@ The optional enhancement is therefore implemented behind `DOCWIKI_VISION_ENABLED
 Get an explicit approved case count and cost budget first. Estimate without making calls:
 
 ```bash
-uv run python -m docwiki.eval --mode estimate --split dev
+uv run python -m doc_wiki.eval --mode estimate --split dev
 ```
 
 Run the estimator with the intended configuration before requesting approval;
@@ -85,7 +85,7 @@ image-token costs and needs its own bounded estimate.
 Once a development run has actually been approved, its explicit command is:
 
 ```bash
-DOCWIKI_LIVE_APPROVED=1 uv run python -m docwiki.eval \
+DOCWIKI_LIVE_APPROVED=1 uv run python -m doc_wiki.eval \
   --mode live --split dev --budget-usd 0.16 \
   --output evaluation/runs/live-dev.json
 ```

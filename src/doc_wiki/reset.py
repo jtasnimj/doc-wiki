@@ -5,8 +5,8 @@ import shutil
 
 from filelock import Timeout
 
-from docwiki.config import Settings
-from docwiki.service import storage_lock
+from doc_wiki.config import Settings
+from doc_wiki.service import storage_lock
 
 
 def main():
@@ -18,7 +18,7 @@ def main():
     root = Settings().data_dir.resolve()
     if not args.yes:
         raise SystemExit(
-            f"This removes DocWiki data in {root}. Stop the server and rerun with --yes."
+            f"This removes doc-wiki data in {root}. Stop the server and rerun with --yes."
         )
     try:
         with storage_lock(root).acquire(timeout=0):
@@ -31,9 +31,9 @@ def main():
                     shutil.rmtree(path)
     except Timeout:
         raise SystemExit(
-            "Stop the running DocWiki application before resetting its data."
+            "Stop the running doc-wiki application before resetting its data."
         ) from None
-    print("DocWiki uploads and indexes removed.")
+    print("doc-wiki uploads and indexes removed.")
 
 
 if __name__ == "__main__":

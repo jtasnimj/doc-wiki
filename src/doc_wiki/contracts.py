@@ -2,8 +2,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
-from docwiki.config import Settings
-from docwiki.errors import AppError
+from doc_wiki.config import Settings
+from doc_wiki.errors import AppError
 
 
 class Question(BaseModel):

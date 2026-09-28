@@ -6,13 +6,13 @@ import httpx
 import openai
 import pytest
 
-from docwiki.app import create_app
-from docwiki.config import Settings
-from docwiki.contracts import Question
-from docwiki.errors import AppError
-from docwiki.grounding import PlanEnvelope, compile_question_plan
-from docwiki.providers import OpenAIProvider
-from docwiki.service import QAService
+from doc_wiki.app import create_app
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Question
+from doc_wiki.errors import AppError
+from doc_wiki.grounding import PlanEnvelope, compile_question_plan
+from doc_wiki.providers import OpenAIProvider
+from doc_wiki.service import QAService
 from tests.fakes import FakeProvider
 from tests.test_answer_contract import sdk_response
 

@@ -6,11 +6,11 @@ from pathlib import Path
 
 import uvicorn
 
-from docwiki.app import create_app
-from docwiki.config import Settings
-from docwiki.contracts import ModelAnswer
-from docwiki.errors import AppError
-from docwiki.offline import FakeProvider
+from doc_wiki.app import create_app
+from doc_wiki.config import Settings
+from doc_wiki.contracts import ModelAnswer
+from doc_wiki.errors import AppError
+from doc_wiki.offline import FakeProvider
 
 
 class BrowserProvider(FakeProvider):

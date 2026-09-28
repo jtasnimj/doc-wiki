@@ -1,8 +1,8 @@
 import pytest
 
-from docwiki.config import Settings
-from docwiki.contracts import normalize_questions
-from docwiki.errors import AppError
+from doc_wiki.config import Settings
+from doc_wiki.contracts import normalize_questions
+from doc_wiki.errors import AppError
 
 
 def test_questions_preserve_order_wording_duplicates_and_ignore_answers():

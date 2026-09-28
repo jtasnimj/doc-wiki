@@ -2,8 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from docwiki.contracts import Evidence, ModelAnswer, ModelRelatedInformation
-from docwiki.errors import AppError
+from doc_wiki.contracts import Evidence, ModelAnswer, ModelRelatedInformation
+from doc_wiki.errors import AppError
 
 
 class StrictModel(BaseModel):

@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from docwiki.config import Settings
-from docwiki.errors import AppError
-from docwiki.json_source import extract_json, parse_json
+from doc_wiki.config import Settings
+from doc_wiki.errors import AppError
+from doc_wiki.json_source import extract_json, parse_json
 
 
 def test_json_records_preserve_values_context_and_paths():
@@ -39,7 +39,7 @@ async def test_pdf_worker_preserves_page_table_relationships(tmp_path):
     import asyncio
     import sys
 
-    from docwiki.pdf import PDFExtractor
+    from doc_wiki.pdf import PDFExtractor
 
     path = tmp_path / "table.pdf"
     process = await asyncio.create_subprocess_exec(sys.executable, "tests/make_pdf.py", str(path))

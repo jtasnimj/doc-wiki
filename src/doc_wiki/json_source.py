@@ -2,9 +2,9 @@ import json
 import math
 from typing import Any
 
-from docwiki.config import Settings
-from docwiki.contracts import Extraction, Location, SourceBlock, SourceContext
-from docwiki.errors import AppError
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Extraction, Location, SourceBlock, SourceContext
+from doc_wiki.errors import AppError
 
 
 def parse_json(raw: bytes, settings: Settings) -> Any:

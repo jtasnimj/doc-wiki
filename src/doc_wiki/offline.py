@@ -4,8 +4,8 @@ import hashlib
 import math
 import re
 
-from docwiki.contracts import ModelAnswer
-from docwiki.grounding import whole_question
+from doc_wiki.contracts import ModelAnswer
+from doc_wiki.grounding import whole_question
 
 
 class FakeProvider:

@@ -22,14 +22,14 @@ uv sync --frozen --group dev            PASS
 fresh non-editable install + PDF QA    PASS (Python 3.12.12, temporary environment)
 ruff check .                          PASS
 ruff format --check .                 PASS
-mypy src/docwiki                      PASS
+mypy src/doc_wiki                      PASS
 pytest -m "not live"                   162 passed
-python -m docwiki.eval --mode offline  18 cases, 0 skipped, no paid calls
+python -m doc_wiki.eval --mode offline  18 cases, 0 skipped, no paid calls
 node tests/browser-smoke.cjs           PASS using installed Chrome / fake server
-docker build -t docwiki:local .        BLOCKED: Colima/containerd disk full while applying build layer
+docker build -t doc-wiki:local .        BLOCKED: Colima/containerd disk full while applying build layer
 ```
 
-Browser screenshots are local ignored artifacts. Committed [offline-results.json](offline-results.json) records the final diagnostic run; [evaluation.md](evaluation.md) explains its denominators and limits. The dependency and supplied-source review is in [licenses.md](licenses.md). The Git root is this `docWiki` directory and the branch is `feature/doc-wiki-with-rag`; no remote repository was created or pushed.
+Browser screenshots are local ignored artifacts. Committed [offline-results.json](offline-results.json) records the final diagnostic run; [evaluation.md](evaluation.md) explains its denominators and limits. The dependency and supplied-source review is in [licenses.md](licenses.md). The Git root is this `doc-wiki` directory and the branch is `feature/doc-wiki-with-rag`; no remote repository was created or pushed.
 
 The implemented [general grounding fixes](grounding-fix-plan.md) preserve source
 context, add bounded neighbors, and validate typed outcomes. Question planning and

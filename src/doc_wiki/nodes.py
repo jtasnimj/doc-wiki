@@ -6,11 +6,11 @@ from llama_index.core import Settings as LlamaSettings
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import NodeRelationship, RelatedNodeInfo, TextNode
 
-from docwiki.config import Settings
-from docwiki.contracts import Evidence, Extraction
-from docwiki.errors import AppError
-from docwiki.evidence import context_text, evidence_text
-from docwiki.tokens import tokens
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Evidence, Extraction
+from doc_wiki.errors import AppError
+from doc_wiki.evidence import context_text, evidence_text
+from doc_wiki.tokens import tokens
 
 
 def make_nodes(extraction: Extraction, doc_id: str, settings: Settings) -> list[TextNode]:

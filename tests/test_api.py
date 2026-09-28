@@ -6,10 +6,10 @@ import httpx
 import pytest
 import starlette.formparsers
 
-from docwiki.app import create_app
-from docwiki.config import Settings
-from docwiki.contracts import ErrorResponse, ModelAnswer
-from docwiki.errors import AppError
+from doc_wiki.app import create_app
+from doc_wiki.config import Settings
+from doc_wiki.contracts import ErrorResponse, ModelAnswer
+from doc_wiki.errors import AppError
 from tests.fakes import FakeProvider
 
 

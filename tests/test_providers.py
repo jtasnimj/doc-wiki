@@ -6,10 +6,10 @@ import httpx
 import openai
 import pytest
 
-from docwiki.config import Settings
-from docwiki.contracts import Evidence, Location
-from docwiki.errors import AppError
-from docwiki.providers import OpenAIProvider
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Evidence, Location
+from doc_wiki.errors import AppError
+from doc_wiki.providers import OpenAIProvider
 
 
 async def test_global_provider_gate_bounds_independent_requests():

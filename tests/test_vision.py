@@ -2,9 +2,9 @@ import asyncio
 import sys
 import time
 
-from docwiki.config import Settings
-from docwiki.contracts import ModelAnswer, Question
-from docwiki.service import QAService
+from doc_wiki.config import Settings
+from doc_wiki.contracts import ModelAnswer, Question
+from doc_wiki.service import QAService
 from tests.fakes import FakeProvider
 
 

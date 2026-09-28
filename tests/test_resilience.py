@@ -7,12 +7,12 @@ from pathlib import Path
 import httpx
 import pytest
 
-from docwiki.app import create_app
-from docwiki.config import Settings
-from docwiki.contracts import Evidence, Location, ModelAnswer, Question
-from docwiki.errors import AppError
-from docwiki.pdf import PDFExtractor
-from docwiki.service import QAService, validate_answer
+from doc_wiki.app import create_app
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Evidence, Location, ModelAnswer, Question
+from doc_wiki.errors import AppError
+from doc_wiki.pdf import PDFExtractor
+from doc_wiki.service import QAService, validate_answer
 from tests.fakes import FakeProvider
 
 

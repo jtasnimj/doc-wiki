@@ -129,7 +129,7 @@ $("export").addEventListener("click", () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(lastResponse, null, 2)], {type: "application/json"}));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "docwiki-answers.json";
+  link.download = "doc-wiki-answers.json";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });

@@ -13,13 +13,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import FormData, UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 
-from docwiki.config import Settings
-from docwiki.contracts import BatchResponse, ErrorResponse, ResultError, normalize_questions
-from docwiki.errors import AppError
-from docwiki.json_source import parse_json
-from docwiki.observability import configure_logging, event, request_id
-from docwiki.providers import OpenAIProvider, Provider
-from docwiki.service import QAService
+from doc_wiki.config import Settings
+from doc_wiki.contracts import BatchResponse, ErrorResponse, ResultError, normalize_questions
+from doc_wiki.errors import AppError
+from doc_wiki.json_source import parse_json
+from doc_wiki.observability import configure_logging, event, request_id
+from doc_wiki.providers import OpenAIProvider, Provider
+from doc_wiki.service import QAService
 
 
 def error_response(error: AppError):
@@ -313,7 +313,7 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
             await service.close()
 
     app = FastAPI(
-        title="DocWiki", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None
+        title="doc-wiki", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None
     )
     app.add_middleware(RequestBounds, settings=settings)
 
@@ -322,7 +322,7 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
         nonce = uuid.uuid4().hex
         page = get_swagger_ui_html(
             openapi_url="/openapi.json",
-            title="DocWiki · API documentation",
+            title="doc-wiki · API documentation",
             swagger_favicon_url="/static/favicon.svg",
             swagger_ui_parameters={"validatorUrl": None, "displayRequestDuration": True},
         )

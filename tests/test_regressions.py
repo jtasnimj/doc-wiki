@@ -7,13 +7,13 @@ import time
 import httpx
 import pytest
 
-from docwiki.app import create_app
-from docwiki.config import Settings
-from docwiki.contracts import Question
-from docwiki.errors import AppError
-from docwiki.json_source import extract_json
-from docwiki.pdf import PDFExtractor
-from docwiki.service import QAService
+from doc_wiki.app import create_app
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Question
+from doc_wiki.errors import AppError
+from doc_wiki.json_source import extract_json
+from doc_wiki.pdf import PDFExtractor
+from doc_wiki.service import QAService
 from tests.fakes import FakeProvider
 
 

@@ -7,8 +7,8 @@ from weakref import WeakValueDictionary
 
 from filelock import FileLock, Timeout
 
-from docwiki.config import Settings
-from docwiki.contracts import (
+from doc_wiki.config import Settings
+from doc_wiki.contracts import (
     BatchResponse,
     Citation,
     DocumentInfo,
@@ -20,13 +20,13 @@ from docwiki.contracts import (
     Result,
     ResultError,
 )
-from docwiki.errors import AppError
-from docwiki.evidence import evidence_locations, evidence_text
-from docwiki.json_source import extract_json
-from docwiki.observability import event
-from docwiki.pdf import PDFExtractor
-from docwiki.providers import Provider
-from docwiki.retrieval import PARSER_VERSION, IndexStore, make_nodes
+from doc_wiki.errors import AppError
+from doc_wiki.evidence import evidence_locations, evidence_text
+from doc_wiki.json_source import extract_json
+from doc_wiki.observability import event
+from doc_wiki.pdf import PDFExtractor
+from doc_wiki.providers import Provider
+from doc_wiki.retrieval import PARSER_VERSION, IndexStore, make_nodes
 
 
 def storage_lock(root: Path) -> FileLock:
@@ -176,7 +176,7 @@ class QAService:
 
     async def enrich(self, extraction: Extraction, path: Path, directory: Path) -> Extraction:
         # Implemented after the development figure gate; baseline never calls it.
-        from docwiki.contracts import Location, SourceBlock
+        from doc_wiki.contracts import Location, SourceBlock
 
         selected = extraction.visual_candidates[: self.settings.vision_crops]
         if not selected:

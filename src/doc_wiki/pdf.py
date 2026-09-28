@@ -4,16 +4,16 @@ import sys
 import tempfile
 from pathlib import Path
 
-from docwiki.config import Settings
-from docwiki.contracts import Extraction
-from docwiki.errors import AppError
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Extraction
+from doc_wiki.errors import AppError
 
 
 class PDFExtractor:
     def __init__(self, settings: Settings, worker_command: list[str] | None = None):
         self.settings = settings
         self.slots = asyncio.Semaphore(settings.pdf_concurrency)
-        self.command = worker_command or [sys.executable, "-m", "docwiki.pdf_worker"]
+        self.command = worker_command or [sys.executable, "-m", "doc_wiki.pdf_worker"]
 
     async def run(self, path: Path, options: dict) -> dict:
         process = None

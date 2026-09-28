@@ -3,8 +3,8 @@ import sys
 
 import pytest
 
-from docwiki.config import Settings
-from docwiki.pdf import PDFExtractor
+from doc_wiki.config import Settings
+from doc_wiki.pdf import PDFExtractor
 
 
 @pytest.mark.parametrize("column_order", ["original", "reverse"])
@@ -53,7 +53,7 @@ async def test_pdf_preserves_verified_heading_scope_and_table_header_provenance(
 def test_json_parent_context_keeps_complete_values_and_exact_record_paths():
     import json
 
-    from docwiki.json_source import extract_json
+    from doc_wiki.json_source import extract_json
 
     source = {
         "description": "x" * 3000,
@@ -75,8 +75,8 @@ def test_json_parent_context_keeps_complete_values_and_exact_record_paths():
 
 
 async def test_indexed_passages_keep_context_and_do_not_link_unrelated_sections(tmp_path):
-    from docwiki.contracts import Evidence
-    from docwiki.retrieval import make_nodes
+    from doc_wiki.contracts import Evidence
+    from doc_wiki.retrieval import make_nodes
 
     path = tmp_path / "context.pdf"
     process = await asyncio.create_subprocess_exec(
@@ -103,9 +103,9 @@ async def test_indexed_passages_keep_context_and_do_not_link_unrelated_sections(
 
 
 async def test_context_citations_point_to_both_passage_and_heading(tmp_path):
-    from docwiki.contracts import Evidence, ModelAnswer, Question
-    from docwiki.retrieval import make_nodes
-    from docwiki.service import validate_answer
+    from doc_wiki.contracts import Evidence, ModelAnswer, Question
+    from doc_wiki.retrieval import make_nodes
+    from doc_wiki.service import validate_answer
 
     path = tmp_path / "context.pdf"
     process = await asyncio.create_subprocess_exec(
@@ -128,9 +128,9 @@ async def test_context_citations_point_to_both_passage_and_heading(tmp_path):
 
 
 def test_json_array_items_do_not_become_each_others_context():
-    from docwiki.contracts import Evidence
-    from docwiki.json_source import extract_json
-    from docwiki.retrieval import make_nodes
+    from doc_wiki.contracts import Evidence
+    from doc_wiki.json_source import extract_json
+    from doc_wiki.retrieval import make_nodes
 
     extraction = extract_json(
         b'["First independent record", "Second independent record"]', Settings()
@@ -154,8 +154,8 @@ async def test_uncertain_nearby_text_is_not_promoted_to_table_caption(tmp_path, 
 
 
 def test_contextual_embeddings_are_separate_from_neighbor_expansion_and_cache_compatible():
-    from docwiki.contracts import Extraction, Location, SourceBlock, SourceContext
-    from docwiki.retrieval import fingerprint, make_nodes
+    from doc_wiki.contracts import Extraction, Location, SourceBlock, SourceContext
+    from doc_wiki.retrieval import fingerprint, make_nodes
     from tests.fakes import FakeProvider
 
     source = Extraction(

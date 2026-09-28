@@ -1,6 +1,6 @@
-from docwiki.config import Settings
-from docwiki.json_source import extract_json
-from docwiki.retrieval import IndexStore, make_nodes
+from doc_wiki.config import Settings
+from doc_wiki.json_source import extract_json
+from doc_wiki.retrieval import IndexStore, make_nodes
 from tests.fakes import FakeProvider
 
 
@@ -28,9 +28,9 @@ async def test_real_llamaindex_chroma_round_trip_and_document_isolation(tmp_path
 
 
 async def test_dense_seed_expands_only_to_its_verified_neighbors(tmp_path):
-    from docwiki.contracts import Extraction, Location, SourceBlock
-    from docwiki.evidence import evidence_text
-    from docwiki.tokens import tokens
+    from doc_wiki.contracts import Extraction, Location, SourceBlock
+    from doc_wiki.evidence import evidence_text
+    from doc_wiki.tokens import tokens
 
     settings = Settings(data_dir=tmp_path, embedding_dimensions=64, top_k=1)
     store = IndexStore(settings, FakeProvider())
@@ -73,8 +73,8 @@ async def test_dense_seed_expands_only_to_its_verified_neighbors(tmp_path):
 
 
 async def test_context_cannot_displace_dense_seeds_and_links_survive_restart(tmp_path):
-    from docwiki.contracts import Extraction, Location, SourceBlock
-    from docwiki.tokens import tokens
+    from doc_wiki.contracts import Extraction, Location, SourceBlock
+    from doc_wiki.tokens import tokens
 
     texts = ["Extra context " * 30, "Primary fact.", "Another relevant fact."]
     budget = sum(len(tokens(text)) for text in texts[1:])

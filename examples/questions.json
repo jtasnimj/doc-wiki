@@ -1,1 +1,7 @@
-["Which cloud providers do you rely on?", "What numerical incident notification SLA is documented?"]
+{
+  "questions": [
+    {"id": "hosting", "question": "Which cloud provider hosts Example Company?"},
+    {"id": "region", "question": "What is the primary hosting region?"},
+    {"id": "notification", "question": "Within how many hours must customers be notified of an incident?"}
+  ]
+}

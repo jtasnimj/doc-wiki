@@ -1,0 +1,7 @@
+{
+  "questions": [
+    {"id": "hosting", "question": "Which hosting provider is named in the policy?"},
+    {"id": "control", "question": "What result is recorded for control CC1?"},
+    {"id": "notification", "question": "Within how many hours must incident contacts be notified?"}
+  ]
+}

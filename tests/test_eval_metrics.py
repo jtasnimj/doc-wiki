@@ -1,5 +1,5 @@
-from docwiki.contracts import Evidence, Location, SourceContext
-from docwiki.eval import coverage, summarize
+from doc_wiki.contracts import Evidence, Location, SourceContext
+from doc_wiki.eval import coverage, summarize
 
 
 def test_context_matches_its_actual_location_without_borrowing_child_paths():

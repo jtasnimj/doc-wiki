@@ -13,12 +13,12 @@ import tempfile
 import time
 from pathlib import Path
 
-from docwiki.config import Settings
-from docwiki.contracts import Extraction, ModelAnswer, Question
-from docwiki.errors import AppError
-from docwiki.offline import FakeProvider
-from docwiki.providers import OpenAIProvider
-from docwiki.service import QAService, validate_answer
+from doc_wiki.config import Settings
+from doc_wiki.contracts import Extraction, ModelAnswer, Question
+from doc_wiki.errors import AppError
+from doc_wiki.offline import FakeProvider
+from doc_wiki.providers import OpenAIProvider
+from doc_wiki.service import QAService, validate_answer
 
 
 def normalize(text):

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from docwiki.workbook_review import render_html, review
+from doc_wiki.workbook_review import render_html, review
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-from docwiki.contracts import Evidence, Location, SourceContext
+from doc_wiki.contracts import Evidence, Location, SourceContext
 
 
 def context_text(context: list[SourceContext]) -> str:

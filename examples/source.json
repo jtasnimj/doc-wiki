@@ -1,1 +1,10 @@
-{"company":"Example","hosting":{"provider":"ExampleCloud","primary_region":"west"},"incident_response":{"notification_timing":"without undue delay"}}
+{
+  "company": "Example Company",
+  "hosting": {
+    "provider": "ExampleCloud",
+    "primary_region": "US West"
+  },
+  "incident_response": {
+    "notification_timing": "Customers are notified without undue delay."
+  }
+}

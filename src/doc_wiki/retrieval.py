@@ -18,14 +18,14 @@ from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from pydantic import PrivateAttr
 
-from docwiki.config import Settings
-from docwiki.contracts import DocumentInfo, Evidence
-from docwiki.errors import AppError
-from docwiki.evidence import evidence_text
-from docwiki.nodes import make_nodes as make_nodes
-from docwiki.observability import event
-from docwiki.providers import Provider
-from docwiki.tokens import tokens
+from doc_wiki.config import Settings
+from doc_wiki.contracts import DocumentInfo, Evidence
+from doc_wiki.errors import AppError
+from doc_wiki.evidence import evidence_text
+from doc_wiki.nodes import make_nodes as make_nodes
+from doc_wiki.observability import event
+from doc_wiki.providers import Provider
+from doc_wiki.tokens import tokens
 
 PARSER_VERSION = "source-context-v4"
 CHUNKER_VERSION = "context-links-v2"

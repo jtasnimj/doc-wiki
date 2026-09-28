@@ -1,179 +1,280 @@
-# DocWiki
+# doc-wiki
 
-A local document-Q&A assessment application. Upload questions JSON and a PDF or JSON source to get ordered answers, explicit missing-information responses, and source citations.
+A document question-answering API and browser interface built with FastAPI, LlamaIndex, and OpenAI. Upload a PDF or JSON document with a set of questions to receive ordered answers, source citations, and explicit responses when information is missing.
 
-Python 3.12 · FastAPI · direct PyMuPDF · LlamaIndex · Chroma PersistentClient · OpenAI `gpt-4o-mini` and `text-embedding-3-small` · plain browser UI.
+## Features
 
-## Run locally
+- **PDF and JSON sources:** Extract PDF text and page-scoped tables, or read nested JSON records while preserving source locations.
+- **Document-grounded answers:** Retrieve relevant passages and generate answers using `gpt-4o-mini`.
+- **Traceable citations:** Return PDF page numbers and bounding boxes, or JSON record paths, with source excerpts.
+- **Persistent indexing:** Reuse Chroma indexes for repeated uploads with matching configuration, including after a restart.
+- **Batch processing:** Preserve question order and IDs, with per-question statuses and errors.
+- **Browser interface:** Upload both files, inspect answers and citations, and export the response as JSON.
+- **Operational controls:** Validate uploads, bound provider concurrency, apply deadlines and retries, and emit structured logs.
 
-Install Python 3.12 and [uv](https://docs.astral.sh/uv/), then:
+## Technology stack
+
+| Component | Technology |
+|---|---|
+| Runtime and API | Python 3.12, FastAPI, Pydantic, Uvicorn |
+| PDF extraction | PyMuPDF |
+| Retrieval and vector storage | LlamaIndex, persistent Chroma |
+| Answer generation | OpenAI `gpt-4o-mini` |
+| Embeddings | OpenAI `text-embedding-3-small` |
+| Browser interface | HTML, CSS, JavaScript |
+| Development | uv, pytest, Ruff, mypy, Docker |
+
+## Installation
+
+Install Python 3.12 and [uv](https://docs.astral.sh/uv/), then run these commands from the project directory:
 
 ```bash
+cd doc-wiki
 uv sync --frozen --group dev
 cp .env.example .env
-# Set OPENAI_API_KEY in .env using your editor; keep it server-side.
-uv run uvicorn docwiki.app:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
-Open <http://127.0.0.1:8000>. Health and the UI work without a key; ingestion/answering requires one. Normal application requests with a configured key incur provider charges. Interactive Swagger API documentation is at `/docs`, with the raw schema at `/openapi.json`. Swagger loads its JavaScript/CSS from jsDelivr; the document-Q&A UI itself needs no CDN or JavaScript build.
+Edit `.env` and set your server-side OpenAI API key:
 
-Use **one API process per data directory**. A file lock enforces this. The default `data/` stores original uploads, normalized extraction, ready manifests, optional image crops, and Chroma vectors. `.env`, instructions, uploads, indexes, test artifacts, and evaluation runs are ignored by Git; Docker copies only the application and its locked dependencies.
+```dotenv
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+The project/distribution name is `doc-wiki`; its Python package is `doc_wiki`, since Python import identifiers cannot contain hyphens. Environment variables retain the `DOCWIKI_` prefix.
+
+## Usage
+
+### Start the server
+
+```bash
+uv run uvicorn doc_wiki.app:app --host 127.0.0.1 --port 8000 --workers 1
+```
+
+- Browser interface: <http://127.0.0.1:8000>
+- Interactive API documentation: <http://127.0.0.1:8000/docs>
+- OpenAPI schema: <http://127.0.0.1:8000/openapi.json>
+
+The browser interface and health endpoint work without an API key. Document ingestion and answering require a key and incur provider charges. Run one API process per data directory; a file lock enforces exclusive access.
+
+### Try the included example
+
+[examples/source.json](examples/source.json) contains a fictional company's hosting and incident-response details. [examples/questions.json](examples/questions.json) asks about its hosting provider, primary region, and a numerical notification deadline that the source deliberately does not specify.
+
+```bash
+curl --fail-with-body http://127.0.0.1:8000/api/qa \
+  -F 'document_file=@examples/source.json;type=application/json' \
+  -F 'questions_file=@examples/questions.json;type=application/json'
+```
+
+You can upload the same two files through the browser interface and choose **Answer questions**, then **Export JSON** to download the response.
+
+For a PDF example, use the included synthetic policy and its matching questions:
+
+```bash
+curl --fail-with-body http://127.0.0.1:8000/api/qa \
+  -F 'document_file=@evaluation/sources/policy.pdf;type=application/pdf' \
+  -F 'questions_file=@examples/pdf-questions.json;type=application/json'
+```
 
 ## API
 
-| Route | Input | Result |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST /api/qa` | Multipart `questions_file`, `document_file` | Ordered batch answers |
-| `GET /healthz` | None | `{"status":"ok"}`, no provider call |
-| `/docs` | Browser | Interactive API documentation and file-upload controls |
-| `/openapi.json` | None | Machine-readable API schema |
-| `/` | Browser | Centered two-file form, ordered answers, citations, JSON export |
+| `GET` | `/healthz` | Returns `{"status":"ok"}` without a provider call |
+| `POST` | `/api/qa` | Accepts multipart `document_file` and `questions_file` uploads |
 
-Canonical JSON-source request:
+Every Q&A request includes both files. Identical document uploads reuse a ready index when the relevant configuration matches. To ask one question, submit a questions file containing one entry.
 
-```bash
-curl --fail-with-body http://127.0.0.1:8000/api/qa \
-  -F 'questions_file=@examples/questions.json;type=application/json' \
-  -F 'document_file=@examples/source.json;type=application/json'
-```
-
-PDF-source request (uses the redistributable synthetic fixture):
-
-```bash
-curl --fail-with-body http://127.0.0.1:8000/api/qa \
-  -F 'questions_file=@examples/questions.json;type=application/json' \
-  -F 'document_file=@evaluation/sources/policy.pdf;type=application/pdf'
-```
-
-Every submission sends both files in one request. Re-uploading the same document with the same relevant configuration automatically reuses its ready index, including across restarts. The returned document ID identifies the source; there is no separate document-management or single-question endpoint. To ask one question, upload a JSON list containing one entry.
-
-Questions files accept a list of strings, a list of records, or a mixture, optionally wrapped in `questions`:
+### Questions format
 
 ```json
-{"questions":["Which cloud provider?",{"id":"sla","question":"What numeric notification SLA is stated?","answer":"ignored"}]}
+{
+  "questions": [
+    {"id": "hosting", "question": "Which cloud provider hosts Example Company?"},
+    {"id": "region", "question": "What is the primary hosting region?"},
+    {"id": "notification", "question": "Within how many hours must customers be notified of an incident?"}
+  ]
+}
 ```
 
-IDs are generated where absent. Duplicate explicit IDs, blank questions, non-string IDs/questions, and excess questions are rejected before paid work. Wording, order, and duplicate questions are preserved; identical question strings share computation within a batch. Existing `answer`, `comments`, or `confidence` in the questions file are ignored.
+A plain array of strings or records is also accepted, including mixed arrays. Missing IDs are generated. Duplicate explicit IDs, blank questions, and invalid types are rejected. Extra fields such as existing `answer`, `comments`, and `confidence` values are ignored. Question wording, order, and duplicate questions are preserved.
 
-Source JSON accepts objects and arrays, nested records, and source Q&A records. It preserves scalar types and exact record paths such as `$[0]["hosting"]`, with ancestor fields when splitting. Top-level primitives, duplicate object keys, non-finite numbers, and empty/non-informative documents are rejected. `false`, `0`, and `null` remain in otherwise informative records. Workbook columns would naturally become JSON keys, with one object per row, but **XLSX upload is outside scope**.
+### Response format
 
-The response contains `document_id`, `results`, `warnings`, and `batch_status`. Each result has `id`, original `question`, `answer`, `status`, `citations`, and nullable `error`:
+The following illustrates the response structure for the JSON example. Answer wording and generated identifiers vary; this is not a captured live-model result. The first result is shown for brevity, while the API returns one result per question.
 
-| Status | Meaning |
+```json
+{
+  "document_id": "<generated-document-id>",
+  "results": [
+    {
+      "id": "hosting",
+      "question": "Which cloud provider hosts Example Company?",
+      "answer": "Example Company is hosted by ExampleCloud.",
+      "status": "answered",
+      "citations": [
+        {
+          "source_id": "<generated-source-id>",
+          "kind": "json",
+          "locations": [{"page": null, "bbox": null, "json_path": "$"}],
+          "excerpt": "<server-derived source excerpt>",
+          "derived": false
+        }
+      ],
+      "error": null
+    }
+  ],
+  "warnings": [],
+  "batch_status": "completed"
+}
+```
+
+| Result status | Meaning |
 |---|---|
-| `answered` | Supported answer, with citations |
-| `partial` | Supported portions plus missing information, or explicitly conflicting evidence |
-| `not_found` | Short explanation of the specific missing information; no answer citations |
-| `error` | Null answer; safe `{code, message}` execution error |
+| `answered` | A supported answer with citations |
+| `partial` | Supported portions with missing information, or conflicting evidence |
+| `not_found` | The requested information is absent; no answer citations |
+| `error` | Processing failed; `answer` is null and `error` contains a safe code and message |
 
-Citations contain a stable source ID, server-derived excerpt, kind, and locations: one-based PDF page plus `[x0,y0,x1,y1]` in PDF points, or an exact JSON record path. Optional visual descriptions are labeled `derived: true`. Citation validation checks identity/provenance and required presence; semantic support still needs evaluation.
+For the notification example, the expected behavior is to explain that “without undue delay” does not specify a number of hours. A `not_found` result can include up to two separately cited `related_information` facts. These do not establish the missing answer.
 
-A `not_found` result may also contain `related_information: [{"text": "…", "citations": [...]}]`: at most two short, directly relevant facts, each with its own citations. These appear under **Related information** and cannot establish a yes/no answer. The field is omitted when empty and for other statuses. Missing or invented related citations become execution errors. For example, a documented authentication control does not establish a failed-login lockout threshold. No retrieved evidence still produces a generic abstention.
+PDF citations use one-based page numbers and bounding boxes in PDF points. JSON citations use exact record paths. Optional visual descriptions are marked `derived: true`.
 
-Once ingestion succeeds, a batch returns HTTP 200 even if every question fails. `batch_status` is `completed`, `partial_failure`, or `failed`; `partial` answers and `not_found` are successful executions. Answering deadlines preserve finished results and mark unfinished entries `request_timeout`.
+After successful ingestion, the API returns HTTP 200 with `batch_status` set to `completed`, `partial_failure`, or `failed`, even if all questions fail. `partial` and `not_found` count as successful executions.
 
-Request/document-level errors use the typed `{ "error": { "code": "...", "message": "..." }, "request_id": "..." }` envelope. Swagger includes the schema, descriptions, and examples for each response:
+Request-level errors have this shape:
+
+```json
+{
+  "error": {"code": "invalid_questions", "message": "Supply 1–20 questions."},
+  "request_id": "<request-id>"
+}
+```
 
 | HTTP status | Meaning |
 |---|---|
 | 400 | Malformed questions JSON or multipart encoding |
-| 413 | An uploaded file or the whole request exceeds its size limit |
+| 413 | File or request size limit exceeded |
 | 415 | Unsupported file type |
-| 422 | Missing/incorrect file fields, invalid questions, or invalid source content |
+| 422 | Invalid fields, questions, or document content |
 | 500 | Unexpected server failure |
-| 502 / 503 / 504 | Provider failure, unavailability, or deadline during document ingestion |
+| 502 / 503 / 504 | Provider failure, unavailability, or ingestion deadline |
 
-Select both files in the centered form and click **Answer questions**. Results appear below as ordered cards with status, answer, and expandable source excerpts. Changing either file clears the previous results and export state. Inputs are disabled while processing; warnings and safe errors remain visible. **Export JSON** downloads the response unchanged.
+## Supported documents
 
-## Limits and controls
+**PDF:** Text-bearing PDFs, with page-level source locations and page-scoped table extraction. Image-only PDFs are rejected; mixed PDFs can produce warnings for pages with limited text. OCR and cross-page table stitching are not included.
 
-| Resource | Default |
+**JSON:** Objects and arrays, including nested records and source Q&A records. Scalar types and record paths are preserved. Top-level primitives, duplicate keys, non-finite numbers, and empty or non-informative content are rejected. XLSX is not supported.
+
+## How it works
+
+1. **Validate:** Check multipart fields, document size, and question structure before paid processing.
+2. **Extract:** Read PDF text/tables or JSON records and retain their source locations.
+3. **Chunk and index:** Split content into bounded passages, embed them, and persist vectors and document artifacts locally.
+4. **Retrieve:** Select the top six dense-retrieval passages, then add bounded neighboring context within the same section or record, subject to a shared token budget.
+5. **Answer:** Send the original question and retrieved evidence to the model and validate the structured answer and citation identities.
+6. **Return:** Preserve question order and report answers, missing information, warnings, and individual failures.
+
+Citation validation checks provenance and required presence. It does not independently prove that every claim is semantically supported.
+
+## Configuration
+
+Copy defaults from [.env.example](.env.example). All application settings are defined in [config.py](src/doc_wiki/config.py).
+
+| Setting | Default |
 |---|---|
-| Document / questions file / whole multipart body | 10 MiB / 256 KiB / 11 MiB |
-| PDF pages / questions / characters per question | 150 / 20 / 2,000 |
-| JSON depth / values / normalized text / chunks | 32 / 100,000 / 10 MiB / 2,000 |
-| Narrative chunk / overlap / dense retrieval / evidence | ~700 tokens / 100 / top 6 / 6,000 tokens |
-| Application-wide provider concurrency / call timeout | 4 / 30 seconds |
-| PDF extraction concurrency / deadline | 1 / 90 seconds |
-| Overall request deadline | 180 seconds, including queues and retries |
+| `DOCWIKI_DATA_DIR` | `data` |
+| `DOCWIKI_PROVIDER_CONCURRENCY` | `4` |
+| `DOCWIKI_PROVIDER_TIMEOUT` | `30` seconds |
+| `DOCWIKI_EXTRACTION_TIMEOUT` | `90` seconds |
+| `DOCWIKI_REQUEST_TIMEOUT` | `180` seconds |
+| `DOCWIKI_CONTEXT_NEIGHBORS` | `true` |
+| `DOCWIKI_VISION_ENABLED` | `false` |
+| `DOCWIKI_CONTEXTUAL_EMBEDDINGS` | `false` |
+| `DOCWIKI_QUESTION_PLANNING` | `false` |
 
-Configuration fields in `src/docwiki/config.py` use the `DOCWIKI_` prefix; the key is `OPENAI_API_KEY`. There is one centralized transient retry; SDK retries are disabled. Quota exhaustion pauses further calls until restart. No implicit embedding, OCR, or layout models are downloaded. A tokenizer vocabulary is bundled with its license.
+Default limits are 10 MiB per document, 256 KiB per questions file, 11 MiB per multipart request, 150 PDF pages, and 20 questions of up to 2,000 characters each. Narrative chunks target 700 tokens with 100-token overlap; retrieved evidence is capped at 6,000 tokens.
 
-Dense retrieval keeps the top-six seeds first, then adds at most one predecessor
-and successor per seed within its page-scoped section or JSON record. All evidence
-shares the 6,000-token limit and each passage retains its own citation identity.
-`DOCWIKI_CONTEXT_NEIGHBORS=false` disables expansion for a controlled comparison.
-Heading/parent context retains its source locations. The new parser/chunker version
-creates fresh indexes on the next upload; existing stored indexes are retained.
+Optional vision, contextual embeddings, and question planning are experimental. Their quality and cost should be evaluated separately before enabling them. See [evaluation details](docs/evaluation.md).
 
-Two evaluation options remain off by default: `DOCWIKI_CONTEXTUAL_EMBEDDINGS=true`
-includes inherited context in embedding text and creates a separate cache entry;
-`DOCWIKI_QUESTION_PLANNING=true` makes one question-only planning call per unique
-question before retrieval. Plans must preserve the complete original text and
-every part must be addressed in the answer. Exact spans and valid citations do not
-prove semantic correctness. Enabling planning adds latency and paid usage; evaluate
-each option separately with approved live cases before adopting it. No additional
-question-part searches are enabled.
+## Testing
 
-## Verify offline
+These checks use deterministic fake providers and do not require an API key:
 
 ```bash
-uv sync --frozen --group dev
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy src/docwiki
+uv run mypy src/doc_wiki
 uv run pytest -m "not live"
-uv run python -m docwiki.eval --mode offline
-docker build -t docwiki:local .
+uv run python -m doc_wiki.eval --mode offline
 ```
 
-Tests use actual multipart requests, parsing, chunking, LlamaIndex indexing/retrieval, and Chroma with deterministic fake providers. They never require a key. The offline evaluator does **not** measure OpenAI quality. See [evaluation observations](docs/evaluation.md), [review resolutions](docs/review.md), and the [rubric evidence matrix](docs/evidence.md).
+Tests cover multipart requests, validation, extraction, retrieval, citation contracts, caching, deadlines, provider failures, and logging. Offline evaluation verifies application behavior; it does not measure OpenAI answer quality. Live semantic retesting of the grounding changes remains pending.
 
-The 19-question paid development evaluation exposed unsupported claims and missing
-complementary evidence. The [general grounding fixes](docs/grounding-fix-plan.md)
-implement source context, bounded neighbors and typed outcomes; live semantic
-retesting remains pending.
-Evaluation manifests and authored counterfactuals remain separate from runtime
-generation. Offline tests verify application behavior, not semantic answer quality.
-
-For an explicit fake-provider browser session:
+For a manual browser review with fake responses:
 
 ```bash
 uv run python -m tests.browser_server
-# Separately, with Playwright and Chromium installed:
-node tests/browser-smoke.cjs
-# BROWSER_CHANNEL=chrome can select an existing Chrome installation.
 ```
 
-This helper uses port 8765 and temporary storage. It is separate from the application entry point. Browser screenshots go to ignored `artifacts/`. The main CI workflow runs offline Python checks, evaluation, and a container health smoke test.
+Open <http://127.0.0.1:8765>. The helper uses temporary storage. With Playwright and Chromium installed, run `node tests/browser-smoke.cjs` in another terminal for the browser smoke checks.
 
-## Docker and reset
+Live evaluation requires explicit approval, `DOCWIKI_LIVE_APPROVED=1`, and a sufficient budget argument. The estimate command makes no provider calls:
 
 ```bash
-docker build -t docwiki:local .
-docker volume create docwiki-data
-docker run --rm --name docwiki -p 127.0.0.1:8000:8000 \
-  --env-file .env -v docwiki-data:/app/data docwiki:local
+uv run python -m doc_wiki.eval --mode estimate --split dev
 ```
 
-The image runs one Uvicorn process as UID 10001. For a host bind mount, grant that UID write access to the chosen data directory. The named volume persists across container restarts. Application events are structured JSON with request IDs, HTTP status/latency, ingestion timing/counts/cache results, provider/model, retries, provider latency, and reported token usage. Document text, questions, answers, uploaded filenames, and credentials are omitted. Uvicorn startup/access messages use its standard format. `tests/test_observability.py` verifies the JSON fields and sensitive-data exclusion with an offline SDK transport; no separate metrics service is required.
-
-Stop the server before resetting. Reset removes the app-managed uploads, crops, and indexes under the configured directory:
+## Docker
 
 ```bash
-uv run python -m docwiki.reset --yes
-# For the stopped container's named volume:
-docker run --rm -v docwiki-data:/app/data docwiki:local python -m docwiki.reset --yes
+docker build -t doc-wiki:local .
+docker volume create doc-wiki-data
+docker run --rm --name doc-wiki -p 127.0.0.1:8000:8000 \
+  --env-file .env -v doc-wiki-data:/app/data doc-wiki:local
 ```
 
-No automatic eviction or retention policy runs. Interrupted ingestion without a valid ready manifest is ignored and can be replaced on re-upload; explicit reset removes abandoned data. Local persistent storage is an assessment tradeoff. Production extensions include authentication/authorization, quotas, recovery, retention controls, server-backed storage, and deployment hardening. IDs are not access controls; keep this demo local.
+The container runs as UID 10001 with one Uvicorn process. Named volumes persist across restarts; host bind mounts must be writable by that UID. CI includes a container health smoke test. Local container execution has not yet been verified following an earlier environment disk-space failure.
 
-## Evaluation and delivery boundaries
+Original uploads, extraction artifacts, and indexes remain in the configured data directory. To delete app-managed data, stop the server first, then run:
 
-The baseline has page-scoped PDF tables, dense retrieval, and vision disabled. No cross-page stitching, OCR, BM25, reranking, rewriting, or agents are included. Ambiguous table headers retain positional columns and all rows, with a warning. Image-only PDFs are rejected; mixed PDFs report pages with limited text. Figures and unusual layouts can lose information.
+```bash
+uv run python -m doc_wiki.reset --yes
+```
 
-Source inspection verified a development question whose answer appears only in a diagram. The bounded optional vision path is implemented and tested with mocks: `DOCWIKI_VISION_ENABLED=true` permits up to three PyMuPDF crops per document, cached `gpt-4o-mini` descriptions, and at most two original images per answer. It remains off by default and has not had paid quality evaluation. See [the recorded gate](docs/evaluation.md#figure-gate).
+## Project structure
 
-Live tests require separate approval with an explicit case count and estimated cost. `uv run python -m docwiki.eval --mode estimate --split dev` makes no calls. After approval, the evaluator also requires `DOCWIKI_LIVE_APPROVED=1` and sufficient `--budget-usd`; see the evaluation document. Verify embedding-model access first, stop on quota errors, and reserve part of the assessment's $5 budget for the demonstration. Usage estimates do not establish the key's remaining balance.
+```text
+doc-wiki/
+├── src/doc_wiki/
+│   ├── app.py             # API routes and application lifecycle
+│   ├── contracts.py       # Request, answer, and citation models
+│   ├── service.py         # Ingestion and batch-answer orchestration
+│   ├── pdf.py             # Isolated PDF extraction entry point
+│   ├── json_source.py     # JSON parsing and source locations
+│   ├── nodes.py           # Chunking and evidence metadata
+│   ├── retrieval.py       # Persistent indexing and retrieval
+│   ├── providers.py       # OpenAI calls and provider controls
+│   ├── config.py          # Environment-backed settings
+│   ├── eval.py            # Offline and gated live evaluation
+│   └── static/            # Browser interface
+├── tests/                 # Offline tests and browser smoke checks
+├── examples/              # Runnable document and question examples
+├── evaluation/            # Authored fixtures and evaluation cases
+├── docs/                  # Architecture, evaluation, and review evidence
+├── AGENTS.md              # Guidance for coding agents
+├── .env.example
+├── Dockerfile
+├── pyproject.toml
+└── uv.lock
+```
 
-Original assessment files stay in ignored `instructions/`; only authored fixtures are included. Review [dependency licensing and redistribution](docs/licenses.md) before submission. No project license has been selected. Commits remain local on `feature/doc-wiki-with-rag`. Automated verification remains offline; paid evaluation and publication require separate approval. Container execution remains unverified after the earlier Colima/containerd disk-full build failure.
+## Review notes and limitations
+
+Start with [architecture](docs/architecture.md), [evaluation observations](docs/evaluation.md), and the [review evidence matrix](docs/evidence.md) for implementation details and known gaps.
+
+This application is intended for local assessment and demonstration. Production deployment would require authentication and authorization, quotas, retention and recovery policies, and deployment hardening. Document IDs are not access controls. Storage is local, has no automatic eviction, and permits one process per directory.
+
+Logs omit document content, questions, answers, uploaded filenames, and credentials. `.env`, uploaded data, and private assessment materials are excluded from Git.
+
+No project license has been selected. See [dependency licensing and redistribution](docs/licenses.md), including the PyMuPDF licensing considerations.
