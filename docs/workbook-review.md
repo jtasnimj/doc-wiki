@@ -1,5 +1,7 @@
 # Workbook baseline and grounded-answer review
 
+This document records the baseline and its pre-retest review. The later [paid retest on 2026-09-28](live-retest-20260928.md) completed all 19 cases: status agreement remained 11/19 and one result failed citation validation. See that report for current outcomes; pending statements below describe the original baseline review.
+
 One approved run used the exact 19 workbook questions against the SOC 2 PDF, before changing behavior at commit `10caac8`. The workbook was never ingested as evidence. Its `answer` cells are comparison references; comments and confidence were ignored. All 19 inspected cases are development cases. The original 12-development/six-held-out manifest is unchanged.
 
 The local capture is `evaluation/runs/workbook-baseline.json`. It contains actual answers, ordered retrieved passages, citations, warnings, per-question retrieval/generation latency, models, configuration and reported usage. The full 19-row report, including each reference answer and actual answer, is `evaluation/runs/workbook-review.html`, with a JSON equivalent. These files contain supplied material and remain ignored. The committed `evaluation/workbook_cases.json` contains authored source judgments, evidence requirements, source/workbook hashes, diagnoses and proposed fixes. `python -m docwiki.workbook_review` rebuilds the report offline and rejects a mismatched source, workbook, question or baseline commit.

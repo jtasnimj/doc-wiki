@@ -119,7 +119,7 @@ The separately approved 19-question workbook baseline and its source review are 
 uv run python -m docwiki.workbook_review
 ```
 
-This writes `evaluation/runs/workbook-review.html` and `.json`. The capture, original questions/reference answers and source excerpts remain local and ignored. The committed manifest contains authored judgments; runtime generation never reads it. No post-change paid retest has been run.
+This writes `evaluation/runs/workbook-review.html` and `.json`. The capture, original questions/reference answers and source excerpts remain local and ignored. The committed manifest contains authored judgments; runtime generation never reads it. The [paid retest](docs/live-retest-20260928.md) ran all 19 questions: status agreement remained 11/19, unsupported claims persisted, and one answer failed citation validation.
 
 For an explicit fake-provider browser session:
 
