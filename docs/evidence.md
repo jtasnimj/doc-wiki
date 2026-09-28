@@ -6,11 +6,11 @@ This matrix reports evidence and limitations, without awarding points. The origi
 |---|---|---|---|
 | Backend correctness (15) | `app.py`, `contracts.py`, `service.py`; `tests/test_api.py`; real JSON and PDF multipart requests | One `/api/qa` workflow requires both files; both formats, ordered duplicates, reuse, all four result statuses, invalid-citation errors, and HTTP 200 for all-failed answering batches tested; removed routes return 404 | 19-case paid retest reviewed: 11/19 matching statuses, unsupported affirmative claims persist, one execution error |
 | Error handling & robustness (15) | Upload bounds; JSON depth/node/expansion limits; corrupt/encrypted/empty/page-limited PDFs; `test_api.py`, `test_pdf_failures.py`, `test_resilience.py`, `test_regressions.py` | Typed error schemas and 400/413/415/422 responses verified without provider calls; safe ingestion failures, deadline result preservation, parser termination/reaping/temp cleanup, partial coverage, and blank-key startup tested | No OCR; unusual layouts and abrupt-process crash remnants need manual review/reset |
-| Code quality & structure (15) | Explicit extraction/retrieval/provider modules, typed contracts; Ruff, mypy, two-axis review | Lint, formatting, source type checks passed; four review findings resolved | Small assessment design; no general process supervisor or multi-process coordination |
-| Tests (15) | `uv run pytest -m "not live"`; actual LlamaIndex/Chroma and deterministic fake providers; socket guard blocks network | 111 offline tests passed; browser smoke also passed | Approved 19-question baseline and retest completed; fake responses cannot establish grounding quality |
-| Performance & concurrency (15) | Global provider gate, async SDK, batched ingestion embeddings, unique-question reuse, keyed ingestion locks, store executor, subprocess parser | Event-controlled concurrency/health/deadline tests; restart and concurrent-upload reuse verified | Single API process; no production load test or storage hard-kill deadline |
+| Code quality & structure (15) | Explicit extraction/retrieval/provider modules, typed contracts; Ruff, mypy, two-axis review | Lint, formatting and source type checks passed; grounding review found a missing caption association, now fixed with a parser-version bump | Small assessment design; no general process supervisor or multi-process coordination |
+| Tests (15) | `uv run pytest -m "not live"`; actual LlamaIndex/Chroma and deterministic fake providers; socket guard blocks network | 162 offline tests passed; browser smoke also passed | Approved 19-question baseline and retest completed; fake responses cannot establish grounding quality |
+| Performance & concurrency (15) | Global provider gate, async SDK, batched ingestion embeddings, unique-question reuse, keyed ingestion locks, store executor, subprocess parser | Event-controlled concurrency/health/deadline tests include optional planning; duplicate planning, restart and concurrent-upload reuse verified | Single API process; no production load test or storage hard-kill deadline |
 | Containerization & observability (10) | Multi-stage non-root `Dockerfile`, named persistent volume, healthcheck, structured safe logs, offline CI; `test_observability.py` | Frozen sync and fresh non-editable package installation passed; JSON request IDs/status/latency, ingestion/cache, provider/model/retries/latency/token usage and exclusion of credentials, filenames, source text, questions and answers verified with mocked SDK | Latest Docker build reached dependency installation after starting Colima, then failed with VM/containerd disk full; container smoke pending; CI authored but no remote run |
-| Grounding & answer quality (10) | LlamaIndex dense retrieval; scoped evidence prompt; server citation allowlisting; 18 original cases, 19 workbook development cases, 24 authored contract scenarios | Original fake hit@6 9/14; workbook live hit@6 8/8 but complete evidence 1/8; 14/22 required groups retrieved, 22/22 extracted; specific abstention and related-citation contracts verified | Paid retest still 11/19 status agreement; seven unsupported affirmatives, three citation/evidence gaps, three uncited-background issues and one execution error; model quality does not meet the target |
+| Grounding & answer quality (10) | LlamaIndex dense retrieval; scoped evidence prompt; server citation allowlisting; 18 original cases, 19 workbook development cases, 36 authored contract scenarios | Current fake dense hit@6 and expanded complete coverage both 9/14; captions, heading context, bounded neighbors and typed outcomes verified offline. Earlier workbook live complete evidence was 1/8; current semantic quality is unmeasured | Paid retest still 11/19 status agreement; seven unsupported affirmatives, three citation/evidence gaps, three uncited-background issues and one execution error; model quality does not meet the target |
 | Minimal frontend (5) | `static/`; `tests/browser-smoke.cjs` with explicit fake-provider test server | Real headless Chrome: centered two-file form, one QA request per submission, all four statuses, errors/loading, ordered duplicates, citations, warnings, export, safe text, distinct related facts with separate citations, omission/export, stale-state clearing, desktop/mobile layout and Swagger file controls | No conversational memory; no inline PDF page viewer |
 
 ## Verification record
@@ -23,7 +23,7 @@ fresh non-editable install + PDF QA    PASS (Python 3.12.12, temporary environme
 ruff check .                          PASS
 ruff format --check .                 PASS
 mypy src/docwiki                      PASS
-pytest -m "not live"                   111 passed
+pytest -m "not live"                   162 passed
 python -m docwiki.eval --mode offline  18 cases, 0 skipped, no paid calls
 node tests/browser-smoke.cjs           PASS using installed Chrome / fake server
 docker build -t docwiki:local .        BLOCKED: Colima/containerd disk full while applying build layer
@@ -31,7 +31,10 @@ docker build -t docwiki:local .        BLOCKED: Colima/containerd disk full whil
 
 Browser screenshots are local ignored artifacts. Committed [offline-results.json](offline-results.json) records the final diagnostic run; [evaluation.md](evaluation.md) explains its denominators and limits. The dependency and supplied-source review is in [licenses.md](licenses.md). The Git root is this `docWiki` directory and the branch is `feature/doc-wiki-with-rag`; no remote repository was created or pushed.
 
-The proposed [general grounding fixes](grounding-fix-plan.md) address source
-context, complementary retrieval and question scope. Citation provenance remains
-verified; semantic support remains a known failure. The application still passes
-all 111 offline tests, which must not be reported as proof of answer quality.
+The implemented [general grounding fixes](grounding-fix-plan.md) preserve source
+context, add bounded neighbors, and validate typed outcomes. Question planning and
+contextual embeddings remain off by default; additional aspect searches are gated
+on development evidence. All 162 offline tests and the browser smoke pass. No paid
+calls were made for this increment, so semantic improvement remains unmeasured.
+The Docker build was not repeated in this increment after its earlier disk-full
+failure; no unrelated containers or storage were removed.

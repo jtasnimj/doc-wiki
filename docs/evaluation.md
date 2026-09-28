@@ -17,14 +17,19 @@ Full local runs with excerpts are saved to ignored `evaluation/runs/`. The commi
 
 ## Observed offline result
 
-All 18 cases ran locally with no skipped sources. The final run used parser `page-blocks-v2`, top-six dense retrieval, 700-token chunks, 100-token overlap, and 64-dimensional **fake hash embeddings**. No parameter tuning used the held-out results.
+All 18 cases ran locally with no skipped sources. The current run uses parser
+`source-context-v4`, chunker `context-links-v2`, top-six dense retrieval with bounded
+neighbors, 700-token chunks, 100-token overlap, and 64-dimensional **fake hash
+embeddings**. Contextual embeddings and question planning are disabled. No parameter
+tuning used the held-out results.
 
 | Metric | Development | Held-out | Combined |
 |---|---:|---:|---:|
 | Cases executed | 12 | 6 | 18 |
 | All required evidence extracted, among positive text/table cases | 10/10 | 4/4 | 14/14 |
-| Evidence hit@6 | 5/10 | 4/4 | 9/14 (64.3%) |
-| All required evidence retrieved | 5/10 | 4/4 | 9/14 (64.3%) |
+| Dense evidence hit@6 | 5/10 | 4/4 | 9/14 (64.3%) |
+| All required evidence in dense seeds | 5/10 | 4/4 | 9/14 (64.3%) |
+| All required evidence after context expansion | 5/10 | 4/4 | 9/14 (64.3%) |
 | Citation structural validity | 12/12 | 6/6 | 18/18 |
 | Factual correctness / citation entailment | Not measured | Not measured | Not measured |
 | Answer-status / abstention quality | Not measured | Not measured | Not measured |
@@ -34,7 +39,23 @@ All 18 cases ran locally with no skipped sources. The final run used parser `pag
 
 The fake retriever missed development cases 01, 02, 03, 05, and 06; the required evidence was present in extraction. These diagnose the fake retrieval stage. They do not establish the behavior of `text-embedding-3-small`, and no BM25/reranker/stitching change was justified from them. Fake generation is deliberately a stub, so publishing its apparent answer accuracy would be misleading.
 
-On this local run, the first sample-PDF case including ingestion took 6,060 ms; subsequent cached cases took 2–13 ms, and first synthetic-PDF ingestion took 109 ms. These use fake providers on one machine, with no network latency, and are not production performance claims. Per-case latency is in the committed result artifact. This original 18-case suite has not had a paid run. The separate 19-question paid development evaluation found persistent unsupported claims and incomplete evidence. The proposed [grounding fixes](grounding-fix-plan.md) describe the next validation gates; no semantic improvement has been established.
+On this local run, the first sample-PDF case including ingestion took 6,049 ms;
+subsequent cached cases took 2–10 ms, and first synthetic-PDF ingestion took 103 ms.
+These use fake providers on one machine, with no network latency, and are not
+production performance claims. Per-case latency is in the committed result
+artifact. This original 18-case suite has not had a paid run. The separate
+19-question paid development evaluation found persistent unsupported claims and
+incomplete evidence. The implemented [grounding fixes](grounding-fix-plan.md)
+still need live validation; no semantic improvement has been established.
+
+Dense hit@6 excludes added neighbors; the full-coverage metric includes them.
+Inherited context matches its own source location, never the child's path by
+association. Authored retrieval tests demonstrate neighbor recovery and seed
+priority with deterministic vectors. The 36 authored semantic targets cover
+scope, polarity, applicability, deadlines and actor changes, while real PDF tests
+reorder table columns and preserve caption qualifications. Mocked outputs verify
+contracts only. Planning is checked for exact text, complete part coverage,
+duplicate reuse, deadlines and shared concurrency, not semantic decomposition.
 
 ## Figure gate
 
@@ -52,7 +73,14 @@ Get an explicit approved case count and cost budget first. Estimate without maki
 uv run python -m docwiki.eval --mode estimate --split dev
 ```
 
-Current text-only estimates including one retry are $0.1590 for 12 development cases, $0.1915 for six held-out cases with three sources, and $0.2946 for all 18 with four sources. These deliberately allow the maximum configured document chunks; a fresh run may ingest more than a cached API request. Estimates use $0.02/M embedding tokens and $0.15/M input, $0.60/M output generation tokens from the [embedding model page](https://developers.openai.com/api/docs/models/text-embedding-3-small) and [GPT-4o mini model page](https://developers.openai.com/api/docs/models/gpt-4o-mini). Verify current pricing before approval. Vision has separate image-token costs and needs its own bounded estimate.
+Run the estimator with the intended configuration before requesting approval;
+enabling question planning adds an input/output allowance and its transient retry.
+A fresh run may ingest more than a cached API request. Estimates use $0.02/M
+embedding tokens and $0.15/M input, $0.60/M output generation tokens from the
+[embedding model page](https://developers.openai.com/api/docs/models/text-embedding-3-small)
+and [GPT-4o mini model page](https://developers.openai.com/api/docs/models/gpt-4o-mini).
+Verify current pricing and payload limits before approval. Vision has separate
+image-token costs and needs its own bounded estimate.
 
 Once a development run has actually been approved, its explicit command is:
 

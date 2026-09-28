@@ -6,6 +6,7 @@
     "skipped": 0,
     "extraction_all_required_coverage": 1.0,
     "retrieval_evidence_hit_at_6": 0.6428571428571429,
+    "retrieval_seed_all_required_coverage": 0.6428571428571429,
     "retrieval_all_required_coverage": 0.6428571428571429,
     "citation_validity": 1.0,
     "status_accuracy": null,
@@ -16,8 +17,15 @@
   },
   "estimated_actual_cost_usd": 0.0,
   "configuration": {
-    "parser": "page-blocks-v2",
-    "dense_top_k": 6,
+    "generation_model": "gpt-4o-mini",
+    "embedding_model": "text-embedding-3-small",
+    "context_neighbors": true,
+    "contextual_embeddings": false,
+    "question_planning": false,
+    "top_k": 6,
+    "evidence_tokens": 6000,
+    "parser": "source-context-v4",
+    "chunker": "context-links-v2",
     "chunk_tokens": 700,
     "overlap_tokens": 100,
     "embedding_provider": "deterministic fake hash vectors (64 dimensions)",
@@ -29,6 +37,7 @@
       "skipped": 0,
       "extraction_all_required_coverage": 1.0,
       "retrieval_evidence_hit_at_6": 0.5,
+      "retrieval_seed_all_required_coverage": 0.5,
       "retrieval_all_required_coverage": 0.5,
       "citation_validity": 1.0,
       "status_accuracy": null,
@@ -42,6 +51,7 @@
       "skipped": 0,
       "extraction_all_required_coverage": 1.0,
       "retrieval_evidence_hit_at_6": 1.0,
+      "retrieval_seed_all_required_coverage": 1.0,
       "retrieval_all_required_coverage": 1.0,
       "citation_validity": 1.0,
       "status_accuracy": null,
@@ -60,11 +70,13 @@
       "expected_status": "partial",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": false,
+      "retrieval_seed_all_required": false,
       "retrieval_any_required": false,
       "retrieval_all_required": false,
       "citation_valid": true,
       "diagnosis": "retrieval_miss",
-      "latency_ms": 6060
+      "latency_ms": 6049
     },
     {
       "id": "dev-02",
@@ -74,11 +86,13 @@
       "expected_status": "partial",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": false,
+      "retrieval_seed_all_required": false,
       "retrieval_any_required": false,
       "retrieval_all_required": false,
       "citation_valid": true,
       "diagnosis": "retrieval_miss",
-      "latency_ms": 7
+      "latency_ms": 9
     },
     {
       "id": "dev-03",
@@ -88,11 +102,13 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": false,
+      "retrieval_seed_all_required": false,
       "retrieval_any_required": false,
       "retrieval_all_required": false,
       "citation_valid": true,
       "diagnosis": "retrieval_miss",
-      "latency_ms": 7
+      "latency_ms": 8
     },
     {
       "id": "dev-04",
@@ -102,11 +118,13 @@
       "expected_status": "not_found",
       "required_evidence_count": 0,
       "extraction_all_required": null,
+      "retrieval_seed_any_required": null,
+      "retrieval_seed_all_required": null,
       "retrieval_any_required": null,
       "retrieval_all_required": null,
       "citation_valid": true,
       "diagnosis": "offline_plumbing_only",
-      "latency_ms": 7
+      "latency_ms": 8
     },
     {
       "id": "dev-05",
@@ -116,6 +134,8 @@
       "expected_status": "partial",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": false,
+      "retrieval_seed_all_required": false,
       "retrieval_any_required": false,
       "retrieval_all_required": false,
       "citation_valid": true,
@@ -130,6 +150,8 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": false,
+      "retrieval_seed_all_required": false,
       "retrieval_any_required": false,
       "retrieval_all_required": false,
       "citation_valid": true,
@@ -144,11 +166,13 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
       "diagnosis": "offline_plumbing_only",
-      "latency_ms": 13
+      "latency_ms": 14
     },
     {
       "id": "dev-08",
@@ -158,6 +182,8 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
@@ -172,6 +198,8 @@
       "expected_status": "partial",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
@@ -186,6 +214,8 @@
       "expected_status": "partial",
       "required_evidence_count": 2,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
@@ -200,6 +230,8 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
@@ -214,9 +246,10 @@
       "expected_status": "not_found",
       "required_evidence_count": 0,
       "extraction_all_required": null,
+      "retrieval_seed_any_required": null,
+      "retrieval_seed_all_required": null,
       "retrieval_any_required": null,
       "retrieval_all_required": null,
-      "citation_valid": true,
       "figure_gate": {
         "source_image_reviewed": true,
         "labels_missing_from_baseline": [
@@ -224,8 +257,9 @@
         ],
         "candidate_detected": true
       },
+      "citation_valid": true,
       "diagnosis": "offline_plumbing_only",
-      "latency_ms": 8
+      "latency_ms": 10
     },
     {
       "id": "held-01",
@@ -235,11 +269,13 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
       "diagnosis": "offline_plumbing_only",
-      "latency_ms": 109
+      "latency_ms": 103
     },
     {
       "id": "held-02",
@@ -249,6 +285,8 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
@@ -263,6 +301,8 @@
       "expected_status": "not_found",
       "required_evidence_count": 0,
       "extraction_all_required": null,
+      "retrieval_seed_any_required": null,
+      "retrieval_seed_all_required": null,
       "retrieval_any_required": null,
       "retrieval_all_required": null,
       "citation_valid": true,
@@ -277,6 +317,8 @@
       "expected_status": "not_found",
       "required_evidence_count": 0,
       "extraction_all_required": null,
+      "retrieval_seed_any_required": null,
+      "retrieval_seed_all_required": null,
       "retrieval_any_required": null,
       "retrieval_all_required": null,
       "citation_valid": true,
@@ -291,6 +333,8 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
@@ -305,11 +349,13 @@
       "expected_status": "answered",
       "required_evidence_count": 1,
       "extraction_all_required": true,
+      "retrieval_seed_any_required": true,
+      "retrieval_seed_all_required": true,
       "retrieval_any_required": true,
       "retrieval_all_required": true,
       "citation_valid": true,
       "diagnosis": "offline_plumbing_only",
-      "latency_ms": 8
+      "latency_ms": 9
     }
   ]
 }

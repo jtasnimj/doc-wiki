@@ -27,7 +27,7 @@ from docwiki.observability import event
 from docwiki.providers import Provider
 from docwiki.tokens import tokens
 
-PARSER_VERSION = "source-context-v3"
+PARSER_VERSION = "source-context-v4"
 CHUNKER_VERSION = "context-links-v2"
 
 

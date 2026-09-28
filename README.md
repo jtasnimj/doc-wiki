@@ -62,7 +62,7 @@ The response contains `document_id`, `results`, `warnings`, and `batch_status`. 
 | Status | Meaning |
 |---|---|
 | `answered` | Supported answer, with citations |
-| `partial` | Supported portions plus an explicit account of missing information |
+| `partial` | Supported portions plus missing information, or explicitly conflicting evidence |
 | `not_found` | Short explanation of the specific missing information; no answer citations |
 | `error` | Null answer; safe `{code, message}` execution error |
 
@@ -99,6 +99,22 @@ Select both files in the centered form and click **Answer questions**. Results a
 
 Configuration fields in `src/docwiki/config.py` use the `DOCWIKI_` prefix; the key is `OPENAI_API_KEY`. There is one centralized transient retry; SDK retries are disabled. Quota exhaustion pauses further calls until restart. No implicit embedding, OCR, or layout models are downloaded. A tokenizer vocabulary is bundled with its license.
 
+Dense retrieval keeps the top-six seeds first, then adds at most one predecessor
+and successor per seed within its page-scoped section or JSON record. All evidence
+shares the 6,000-token limit and each passage retains its own citation identity.
+`DOCWIKI_CONTEXT_NEIGHBORS=false` disables expansion for a controlled comparison.
+Heading/parent context retains its source locations. The new parser/chunker version
+creates fresh indexes on the next upload; existing stored indexes are retained.
+
+Two evaluation options remain off by default: `DOCWIKI_CONTEXTUAL_EMBEDDINGS=true`
+includes inherited context in embedding text and creates a separate cache entry;
+`DOCWIKI_QUESTION_PLANNING=true` makes one question-only planning call per unique
+question before retrieval. Plans must preserve the complete original text and
+every part must be addressed in the answer. Exact spans and valid citations do not
+prove semantic correctness. Enabling planning adds latency and paid usage; evaluate
+each option separately with approved live cases before adopting it. No additional
+question-part searches are enabled.
+
 ## Verify offline
 
 ```bash
@@ -114,7 +130,9 @@ docker build -t docwiki:local .
 Tests use actual multipart requests, parsing, chunking, LlamaIndex indexing/retrieval, and Chroma with deterministic fake providers. They never require a key. The offline evaluator does **not** measure OpenAI quality. See [evaluation observations](docs/evaluation.md), [review resolutions](docs/review.md), and the [rubric evidence matrix](docs/evidence.md).
 
 The 19-question paid development evaluation exposed unsupported claims and missing
-complementary evidence. See the proposed [general grounding fixes](docs/grounding-fix-plan.md).
+complementary evidence. The [general grounding fixes](docs/grounding-fix-plan.md)
+implement source context, bounded neighbors and typed outcomes; live semantic
+retesting remains pending.
 Evaluation manifests and authored counterfactuals remain separate from runtime
 generation. Offline tests verify application behavior, not semantic answer quality.
 
@@ -158,4 +176,4 @@ Source inspection verified a development question whose answer appears only in a
 
 Live tests require separate approval with an explicit case count and estimated cost. `uv run python -m docwiki.eval --mode estimate --split dev` makes no calls. After approval, the evaluator also requires `DOCWIKI_LIVE_APPROVED=1` and sufficient `--budget-usd`; see the evaluation document. Verify embedding-model access first, stop on quota errors, and reserve part of the assessment's $5 budget for the demonstration. Usage estimates do not establish the key's remaining balance.
 
-Original assessment files stay in ignored `instructions/`; only authored fixtures are included. Review [dependency licensing and redistribution](docs/licenses.md) before submission. No project license has been selected. Commits remain local on `feature/doc-wiki-with-rag`. Automated verification remains offline; paid evaluation and publication require separate approval. Container execution is pending a working local Docker daemon.
+Original assessment files stay in ignored `instructions/`; only authored fixtures are included. Review [dependency licensing and redistribution](docs/licenses.md) before submission. No project license has been selected. Commits remain local on `feature/doc-wiki-with-rag`. Automated verification remains offline; paid evaluation and publication require separate approval. Container execution remains unverified after the earlier Colima/containerd disk-full build failure.

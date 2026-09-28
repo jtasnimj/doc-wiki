@@ -10,6 +10,17 @@ with pymupdf.open() as document:
     page.insert_text((50, 190), "READY", fontsize=11, fontname="hebo")
     page.insert_text((50, 235), "Supplier responsibilities", fontsize=17, fontname="hebo")
     page.insert_text((50, 280), "The supplier maintains the cooling system.", fontsize=11)
+    caption_style = sys.argv[3] if len(sys.argv) > 3 else "caption"
+    caption_text = (
+        "Unrelated nearby paragraph."
+        if caption_style == "ordinary"
+        else "Table 1: Supplier expectations excluded from examination."
+    )
+    page.insert_text(
+        (90 if caption_style == "offset" else 50, 200 if caption_style == "distant" else 305),
+        caption_text,
+        fontsize=10,
+    )
     for x in (50, 230, 450):
         page.draw_line((x, 320), (x, 400))
     for y in (320, 360, 400):

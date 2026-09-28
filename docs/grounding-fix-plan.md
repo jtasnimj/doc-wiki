@@ -1,10 +1,12 @@
 # General grounding fixes
 
-Proposed implementation plan; implementation has not started. Live evaluation
-still requires separate approval. The user chose to keep `gpt-4o-mini` fixed and remove
-the previous grounding/workbook reports, raw paid traces and rejected prototypes.
-The proposed scope below covers the three demonstrated failure areas; scope
-selection is still pending.
+Approved implementation scope. Source-context preservation, bounded neighbor
+retrieval, typed internal outcomes and an optional question-only planner are
+implemented. `gpt-4o-mini` remains fixed. Planning and contextual embeddings stay
+off by default pending a separately approved semantic evaluation. Additional
+question-part searches remain conditional on demonstrated misses. No paid calls
+were made for this implementation; prior reports, raw traces and rejected
+prototypes remain removed.
 
 ## Worth fixing
 
@@ -144,7 +146,7 @@ confidence thresholds or answer templates keyed to evaluation cases.
 5. Obtain separate approval for exact live case counts and cost before model
    calls. Compare one change at a time. Raw historical traces are being deleted,
    so a new controlled baseline is needed for a reliable before/after comparison.
-6. Require zero unsupported affirmative/negative/non-applicability conclusions
+6. For live adoption, require zero unsupported affirmative/negative/non-applicability conclusions
    on the targeted failure controls, no regression on supported controls, no new
    structural execution errors, and improved complete evidence coverage without
    exceeding limits. Review every live answer and citation against the source.
@@ -165,4 +167,5 @@ their generated HTML/JSON reports, paid captures, related screenshots and debug
 prototypes. Documentation links now point to this implementation plan. Source
 documents, evaluation fixtures/tests, current indexes, architecture/setup
 documentation and concise limitations in the rubric matrix remain. Git history
-was not rewritten. All 111 offline tests and documentation-link checks pass.
+was not rewritten. Current verification results are in the
+[rubric evidence matrix](evidence.md).

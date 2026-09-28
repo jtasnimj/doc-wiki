@@ -65,7 +65,7 @@ held-out suite. Mock tests verify contracts, not semantic model quality.
 The previously approved paid baseline, retest and diagnostics are complete.
 Further paid evaluation needs separate approval for its case count and cost.
 Keep source-reviewed evaluation fixtures, offline/browser checks and an honest
-rubric matrix. The proposed next increment is in the
+rubric matrix. The implemented increment and remaining evaluation gates are in the
 [general grounding plan](grounding-fix-plan.md). Historical reports, paid traces
 and rejected prototypes are removed at the user's request. No storage reset or
 model/stack/vision change.

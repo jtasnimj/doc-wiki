@@ -34,7 +34,13 @@ async def test_pdf_preserves_verified_heading_scope_and_table_header_provenance(
     }
     assert table.header_location.page == 1
     assert table.header_location.bbox != table.location.bbox
-    assert [c.text for c in table.context] == ["Supplier responsibilities"]
+    assert [c.text for c in table.context] == [
+        "Supplier responsibilities",
+        "Table 1: Supplier expectations excluded from examination.",
+    ]
+    caption = table.context[-1]
+    assert caption.role == "caption" and caption.location.page == 1
+    assert caption.location.bbox[3] < table.header_location.bbox[1]
     last = blocks[-1]
     assert last.location.page == 2 and last.context == []
     first_page = [b for b in blocks if b.location.page == 1]
@@ -91,6 +97,8 @@ async def test_indexed_passages_keep_context_and_do_not_link_unrelated_sections(
     assert meter.location.bbox != meter.context[0].location.bbox
     table = next(e for e in passages if "Not examined" in e.text)
     assert table.header_location.page == 1
+    assert table.context[-1].role == "caption"
+    assert "excluded from examination" in table.context[-1].text
     assert table.previous_id is None and table.next_id is None
 
 
@@ -130,3 +138,53 @@ def test_json_array_items_do_not_become_each_others_context():
     nodes = make_nodes(extraction, "doc_records", Settings())
     passages = [Evidence.model_validate_json(node.metadata["source"]) for node in nodes]
     assert all(p.previous_id is None and p.next_id is None for p in passages)
+
+
+@pytest.mark.parametrize("caption_style", ["ordinary", "distant", "offset"])
+async def test_uncertain_nearby_text_is_not_promoted_to_table_caption(tmp_path, caption_style):
+    path = tmp_path / "ambiguous.pdf"
+    process = await asyncio.create_subprocess_exec(
+        sys.executable, "tests/make_context_pdf.py", str(path), "original", caption_style
+    )
+    assert await process.wait() == 0
+    extraction = await PDFExtractor(Settings()).extract(path)
+    table = next(b for b in extraction.blocks if b.rows)
+    assert all(c.role != "caption" for c in table.context)
+    assert any("Unrelated nearby" in b.text or "Table 1:" in b.text for b in extraction.blocks)
+
+
+def test_contextual_embeddings_are_separate_from_neighbor_expansion_and_cache_compatible():
+    from docwiki.contracts import Extraction, Location, SourceBlock, SourceContext
+    from docwiki.retrieval import fingerprint, make_nodes
+    from tests.fakes import FakeProvider
+
+    source = Extraction(
+        blocks=[
+            SourceBlock(
+                text="Cooling is maintained.",
+                kind="pdf",
+                method="pymupdf-text",
+                location=Location(page=1),
+                context=[
+                    SourceContext(
+                        block_id="heading",
+                        role="heading",
+                        text="Supplier responsibilities",
+                        location=Location(page=1),
+                    )
+                ],
+            )
+        ]
+    )
+    baseline = Settings(contextual_embeddings=False)
+    contextual = baseline.model_copy(update={"contextual_embeddings": True})
+    original = make_nodes(source, "doc_test", baseline)[0]
+    enriched = make_nodes(source, "doc_test", contextual)[0]
+    assert "Supplier responsibilities" not in original.text
+    assert "Supplier responsibilities" in enriched.text
+    assert original.metadata == enriched.metadata
+    provider = FakeProvider()
+    assert fingerprint(baseline, provider) != fingerprint(contextual, provider)
+    assert fingerprint(baseline, provider) == fingerprint(
+        baseline.model_copy(update={"context_neighbors": False}), provider
+    )

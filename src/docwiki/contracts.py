@@ -64,7 +64,7 @@ class Location(BaseModel):
 
 class SourceContext(BaseModel):
     block_id: str
-    role: Literal["heading", "json_parent"]
+    role: Literal["heading", "caption", "json_parent"]
     text: str
     location: Location
     omitted_values: bool = False

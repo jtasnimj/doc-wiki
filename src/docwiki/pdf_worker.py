@@ -1,6 +1,7 @@
 """Process-only PyMuPDF adapter. No imports from API, providers or vector storage."""
 
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -156,6 +157,31 @@ def extract(path: str, options: dict) -> dict:
                         ]
                 if item.get("rows"):
                     item["group_id"] = item["block_id"]
+                    if i > 0:
+                        preceding = page_blocks[i - 1]
+                        box = preceding["location"]["bbox"]
+                        top = (item.get("header_location") or item["location"])["bbox"]
+                        if (
+                            preceding["method"] == "pymupdf-text"
+                            and re.match(
+                                r"(?i)^table\s+(?:\d+(?:[.-]\d+)*|[a-z])\b", preceding["text"]
+                            )
+                            and len(preceding["text"]) <= 300
+                            and 0 <= top[1] - box[3] <= 36
+                            and abs(top[0] - box[0]) <= 24
+                        ):
+                            context = item.setdefault("context", [])
+                            context[:] = [
+                                c for c in context if c["block_id"] != preceding["block_id"]
+                            ]
+                            context.append(
+                                {
+                                    "block_id": preceding["block_id"],
+                                    "role": "caption",
+                                    "text": preceding["text"],
+                                    "location": preceding["location"],
+                                }
+                            )
             usable = sum(len(b["text"].strip()) for b in page_blocks)
             if usable < 30:
                 skipped.append(page.number + 1)
