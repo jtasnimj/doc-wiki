@@ -113,13 +113,10 @@ docker build -t docwiki:local .
 
 Tests use actual multipart requests, parsing, chunking, LlamaIndex indexing/retrieval, and Chroma with deterministic fake providers. They never require a key. The offline evaluator does **not** measure OpenAI quality. See [evaluation observations](docs/evaluation.md), [review resolutions](docs/review.md), and the [rubric evidence matrix](docs/evidence.md).
 
-The separately approved 19-question workbook baseline and its source review are summarized in [the workbook review](docs/workbook-review.md). Rebuild the detailed local report from its saved capture without any provider calls:
-
-```bash
-uv run python -m docwiki.workbook_review
-```
-
-This writes `evaluation/runs/workbook-review.html` and `.json`. The capture, original questions/reference answers and source excerpts remain local and ignored. The committed manifest contains authored judgments; runtime generation never reads it. The [paid retest](docs/live-retest-20260928.md) ran all 19 questions: status agreement remained 11/19, unsupported claims persisted, and one answer failed citation validation.
+The 19-question paid development evaluation exposed unsupported claims and missing
+complementary evidence. See the proposed [general grounding fixes](docs/grounding-fix-plan.md).
+Evaluation manifests and authored counterfactuals remain separate from runtime
+generation. Offline tests verify application behavior, not semantic answer quality.
 
 For an explicit fake-provider browser session:
 

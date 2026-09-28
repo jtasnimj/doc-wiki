@@ -31,11 +31,7 @@ docker build -t docwiki:local .        BLOCKED: Colima/containerd disk full whil
 
 Browser screenshots are local ignored artifacts. Committed [offline-results.json](offline-results.json) records the final diagnostic run; [evaluation.md](evaluation.md) explains its denominators and limits. The dependency and supplied-source review is in [licenses.md](licenses.md). The Git root is this `docWiki` directory and the branch is `feature/doc-wiki-with-rag`; no remote repository was created or pushed.
 
-The [workbook review](workbook-review.md) separates actual baseline findings, unsupported reference claims and the initial pending retest. The full local 19-row HTML/JSON report contains original answers and ranked evidence; it stays out of Git and Docker. The approved baseline cost estimate from reported usage was $0.006732. The later [paid retest](live-retest-20260928.md) cost about $0.0078 and found no improvement in status agreement. No storage reset occurred.
-
-The subsequent [grounding diagnosis](grounding-debug-20260928.md) reproduced
-complementary retrieval misses offline and tested two separately approved
-generation prototypes (eight and twelve cases, about $0.0068 combined). Neither
-passed the semantic gate, so neither was adopted. Citation provenance remains
+The proposed [general grounding fixes](grounding-fix-plan.md) address source
+context, complementary retrieval and question scope. Citation provenance remains
 verified; semantic support remains a known failure. The application still passes
 all 111 offline tests, which must not be reported as proof of answer quality.

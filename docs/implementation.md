@@ -62,7 +62,10 @@ paraphrased/counterfactual development cases for all failure patterns, explicit
 negatives, supported non-applicability and weak evidence. Preserve the original
 held-out suite. Mock tests verify contracts, not semantic model quality.
 
-The approved one-time baseline has 19 questions and a disclosed conservative
-$0.14 estimate. Any post-change paid evaluation needs its own approval. Deliver
-the 19-row review with honest pending retest outcomes, offline checks, browser
-checks and a local commit. No storage reset or model/stack/vision change.
+The previously approved paid baseline, retest and diagnostics are complete.
+Further paid evaluation needs separate approval for its case count and cost.
+Keep source-reviewed evaluation fixtures, offline/browser checks and an honest
+rubric matrix. The proposed next increment is in the
+[general grounding plan](grounding-fix-plan.md). Historical reports, paid traces
+and rejected prototypes are removed at the user's request. No storage reset or
+model/stack/vision change.
