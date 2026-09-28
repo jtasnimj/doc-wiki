@@ -61,4 +61,9 @@ Full local artifacts remain ignored because they contain supplied reference answ
 
 ## Next implementation decision
 
+The subsequent [grounding diagnosis](grounding-debug-20260928.md) tested this
+proposal. Its approved eight-case evidence-first diagnostic failed and was not
+adopted. That report records the causal findings, offline ranking experiments
+and the next gated experiment.
+
 Prompt instructions alone were insufficient in this run. The next generic experiment should require explicit evidence decisions for requested subparts and preserve table roles/section context, then derive the status from supported coverage. A bounded repair for structurally invalid output can be considered separately for case 18. Complementary retrieval should be tested against the recorded misses, including duplicate plan rows and supplier scope context. These are proposed changes, not implemented fixes or proven improvements. Keep reference answers outside runtime, retain citation validation, and use separate counterfactuals to guard against question-specific behavior.
