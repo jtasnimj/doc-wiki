@@ -2,6 +2,7 @@
 
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,8 @@ def distinct_header_style(first, second, text_blocks) -> bool:
 
 
 def extract(path: str, options: dict) -> dict:
-    blocks, warnings, skipped, candidates, unknown_headers = [], [], [], [], []
+    blocks: list[dict[str, Any]] = []
+    warnings, skipped, candidates, unknown_headers = [], [], [], []
     total = 0
     with pymupdf.open(path) as doc:
         if doc.needs_pass:
@@ -45,6 +47,12 @@ def extract(path: str, options: dict) -> dict:
         for page in doc:
             page_blocks: list[dict[str, Any]] = []
             text_blocks = page.get_text("dict", flags=pymupdf.TEXTFLAGS_TEXT, sort=True)["blocks"]
+            sizes: Counter[float] = Counter()
+            for text_block in text_blocks:
+                for line in text_block.get("lines", []):
+                    for span in line["spans"]:
+                        sizes[round(span["size"], 1)] += len(span["text"].strip())
+            body_size = sizes.most_common(1)[0][0] if sizes else 11
             drawings = [
                 d for d in page.get_drawings() if d["rect"].get_area() < page.rect.get_area() * 0.85
             ]
@@ -82,6 +90,12 @@ def extract(path: str, options: dict) -> dict:
                         location={"page": page.number + 1, "bbox": list(table.bbox)},
                         method="pymupdf-table",
                         header=headers,
+                        header_location={
+                            "page": page.number + 1,
+                            "bbox": list(table.header.bbox),
+                        }
+                        if reliable
+                        else None,
                         rows=rows,
                     )
                 )
@@ -89,25 +103,59 @@ def extract(path: str, options: dict) -> dict:
                 if block["type"] != 0:
                     continue
                 lines = []
+                included_spans = []
                 for line in block["lines"]:
                     spans = []
                     for span in line["spans"]:
                         x0, y0, x1, y1 = span["bbox"]
                         if not any(pymupdf.Point((x0 + x1) / 2, (y0 + y1) / 2) in r for r in rects):
                             spans.append(span["text"])
+                            included_spans.append(span)
                     if spans:
                         lines.append(" ".join(spans))
                 text = "\n".join(lines).strip()
                 if text:
+                    heading = (
+                        len(text) <= 120
+                        and len(lines) <= 2
+                        and not text.endswith((".", ";", ","))
+                        and not text.startswith(("●", "•", "- "))
+                        and all(span["size"] >= body_size + 1.5 for span in included_spans)
+                        and 0.05 * page.rect.height < block["bbox"][1] < 0.9 * page.rect.height
+                    )
                     page_blocks.append(
                         dict(
                             text=text,
                             kind="pdf",
                             location={"page": page.number + 1, "bbox": block["bbox"]},
                             method="pymupdf-text",
-                            section=text if len(text) < 100 else None,
+                            section=text if heading else None,
                         )
                     )
+            page_blocks.sort(key=lambda b: (b["location"]["bbox"][1], b["location"]["bbox"][0]))
+            active_heading = None
+            for i, item in enumerate(page_blocks):
+                item["block_id"] = f"page-{page.number + 1}-block-{i}"
+                item["ordinal"] = len(blocks) + i
+                if item.get("section"):
+                    active_heading = item
+                    item["group_id"] = item["block_id"]
+                elif active_heading is not None:
+                    x = item["location"]["bbox"][0]
+                    heading_x = active_heading["location"]["bbox"][0]
+                    if abs(x - heading_x) <= 24:
+                        item["parent_id"] = active_heading["block_id"]
+                        item["group_id"] = active_heading["block_id"]
+                        item["context"] = [
+                            {
+                                "block_id": active_heading["block_id"],
+                                "role": "heading",
+                                "text": active_heading["text"],
+                                "location": active_heading["location"],
+                            }
+                        ]
+                if item.get("rows"):
+                    item["group_id"] = item["block_id"]
             usable = sum(len(b["text"].strip()) for b in page_blocks)
             if usable < 30:
                 skipped.append(page.number + 1)

@@ -21,6 +21,7 @@ from docwiki.contracts import (
     ResultError,
 )
 from docwiki.errors import AppError
+from docwiki.evidence import evidence_locations, evidence_text
 from docwiki.json_source import extract_json
 from docwiki.observability import event
 from docwiki.pdf import PDFExtractor
@@ -54,8 +55,8 @@ def validate_answer(question: Question, answer: ModelAnswer, evidence: list[Evid
             Citation(
                 source_id=ident,
                 kind=allowed[ident].kind,
-                locations=[allowed[ident].location],
-                excerpt=allowed[ident].text,
+                locations=evidence_locations(allowed[ident]),
+                excerpt=evidence_text(allowed[ident]),
                 derived=allowed[ident].kind == "vision",
             )
             for ident in dict.fromkeys(source_ids)

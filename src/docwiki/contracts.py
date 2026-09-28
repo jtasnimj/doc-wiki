@@ -62,13 +62,27 @@ class Location(BaseModel):
     json_path: str | None = None
 
 
+class SourceContext(BaseModel):
+    block_id: str
+    role: Literal["heading", "json_parent"]
+    text: str
+    location: Location
+    omitted_values: bool = False
+
+
 class SourceBlock(BaseModel):
     text: str
     kind: Literal["pdf", "json", "vision"]
     location: Location
     method: str
+    block_id: str | None = None
+    ordinal: int = 0
+    parent_id: str | None = None
+    group_id: str | None = None
+    context: list[SourceContext] = Field(default_factory=list)
     section: str | None = None
     header: list[str] = Field(default_factory=list)
+    header_location: Location | None = None
     rows: list[list[str]] = Field(default_factory=list)
     image_ref: str | None = None
 
@@ -87,6 +101,13 @@ class Evidence(BaseModel):
     kind: Literal["pdf", "json", "vision"]
     location: Location
     method: str
+    block_id: str | None = None
+    parent_id: str | None = None
+    group_id: str | None = None
+    previous_id: str | None = None
+    next_id: str | None = None
+    context: list[SourceContext] = Field(default_factory=list)
+    header_location: Location | None = None
     image_ref: str | None = None
 
 

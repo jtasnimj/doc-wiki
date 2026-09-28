@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     chunk_overlap: int = Field(100, ge=0)
     top_k: int = Field(6, gt=0)
     evidence_tokens: int = Field(6000, gt=0)
+    context_neighbors: bool = True
+    contextual_embeddings: bool = False
     provider_concurrency: int = Field(4, ge=1, le=16)
     provider_timeout: float = Field(30, gt=0)
     extraction_timeout: float = Field(90, gt=0)

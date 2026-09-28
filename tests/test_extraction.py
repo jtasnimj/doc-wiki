@@ -17,7 +17,7 @@ def test_json_records_preserve_values_context_and_paths():
     source = [{"name": "alpha", "description": "x " * 3000}]
     blocks = extract_json(json.dumps(source).encode(), Settings()).blocks
     assert any(b.location.json_path == '$[0]["description"]' for b in blocks)
-    assert all("alpha" in b.text for b in blocks)
+    assert all("alpha" in b.text or any("alpha" in c.text for c in b.context) for b in blocks)
 
 
 @pytest.mark.parametrize("raw", [b'{"a":1,"a":2}', b'{"a":NaN}', b"{bad}", b"{}", b"[]", b"null"])

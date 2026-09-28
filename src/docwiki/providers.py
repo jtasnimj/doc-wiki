@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from docwiki.config import Settings
 from docwiki.contracts import Evidence, ModelAnswer
 from docwiki.errors import AppError
+from docwiki.evidence import evidence_text
 from docwiki.observability import event
 
 SYSTEM_PROMPT = """Answer concisely using only the supplied document evidence.
@@ -177,7 +178,14 @@ class OpenAIProvider:
                 "question": question,
                 "coverage_warnings": warnings,
                 "evidence": [
-                    {"source_id": e.source_id, "content": e.text, "kind": e.kind} for e in evidence
+                    {
+                        "source_id": e.source_id,
+                        "content": evidence_text(e),
+                        "kind": e.kind,
+                        "method": e.method,
+                        "table_header_status": "verified" if e.header_location else "unknown",
+                    }
+                    for e in evidence
                 ],
             },
             ensure_ascii=False,

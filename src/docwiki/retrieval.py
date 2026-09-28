@@ -3,6 +3,7 @@ import contextvars
 import hashlib
 import json
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from importlib.metadata import version
 from pathlib import Path
@@ -10,23 +11,24 @@ from pathlib import Path
 import chromadb
 from chromadb.api import ClientAPI
 from chromadb.config import Settings as ChromaSettings
-from llama_index.core import Settings as LlamaSettings
 from llama_index.core import StorageContext, VectorStoreIndex
 from llama_index.core.base.embeddings.base import BaseEmbedding
-from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import QueryBundle, TextNode
 from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from pydantic import PrivateAttr
 
 from docwiki.config import Settings
-from docwiki.contracts import DocumentInfo, Evidence, Extraction
+from docwiki.contracts import DocumentInfo, Evidence
 from docwiki.errors import AppError
+from docwiki.evidence import evidence_text
+from docwiki.nodes import make_nodes as make_nodes
+from docwiki.observability import event
 from docwiki.providers import Provider
 from docwiki.tokens import tokens
 
-PARSER_VERSION = "page-blocks-v2"
-CHUNKER_VERSION = "structure-v1"
+PARSER_VERSION = "source-context-v3"
+CHUNKER_VERSION = "context-links-v2"
 
 
 class ControlledEmbedding(BaseEmbedding):
@@ -60,6 +62,7 @@ def fingerprint(settings: Settings, provider: Provider) -> str:
         "pymupdf": version("pymupdf"),
         "chunker": CHUNKER_VERSION,
         "chunk_tokens": settings.chunk_tokens,
+        "contextual_embeddings": settings.contextual_embeddings,
         "overlap": settings.chunk_overlap,
         "embedding": settings.embedding_model,
         "dimensions": settings.embedding_dimensions,
@@ -78,71 +81,6 @@ def fingerprint(settings: Settings, provider: Provider) -> str:
         ],
     }
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
-
-
-def make_nodes(extraction: Extraction, doc_id: str, settings: Settings) -> list[TextNode]:
-    LlamaSettings.tokenizer = tokens
-    nodes = []
-    for block_number, block in enumerate(extraction.blocks):
-        prefix = ""
-        texts = [block.text]
-        if block.header:
-            prefix = "Table columns: " + " | ".join(block.header) + "\n"
-            texts = [
-                " | ".join(f"{key}: {val}" for key, val in zip(block.header, row, strict=True))
-                for row in block.rows
-            ]
-        elif block.kind == "json":
-            prefix = f"Source record: {block.location.json_path}\n"
-            parent = next(
-                (line for line in block.text.splitlines() if line.startswith("Parent fields:")), ""
-            )
-            if parent:
-                prefix += parent + "\n"
-        overhead = len(tokens(prefix))
-        if overhead >= settings.chunk_tokens - 30:
-            raise AppError(
-                "source_context_limit", "A source record has too much context to chunk safely."
-            )
-        splitter = SentenceSplitter(
-            chunk_size=settings.chunk_tokens - overhead,
-            chunk_overlap=min(settings.chunk_overlap, (settings.chunk_tokens - overhead) // 4),
-            tokenizer=tokens,
-            chunking_tokenizer_fn=lambda text: re.split(r"(?<=[.!?])\s+|\n\n+", text),
-        )
-        piece_number = 0
-        for text in texts:
-            for piece in splitter.split_text(text):
-                source_id = (
-                    "src_"
-                    + hashlib.sha256(
-                        f"{doc_id}:{block_number}:{piece_number}".encode()
-                    ).hexdigest()[:24]
-                )
-                piece_number += 1
-                evidence = Evidence(
-                    source_id=source_id,
-                    text=prefix + piece,
-                    kind=block.kind,
-                    location=block.location,
-                    method=block.method,
-                    image_ref=block.image_ref,
-                )
-                metadata = {"docwiki_document_id": doc_id, "source": evidence.model_dump_json()}
-                nodes.append(
-                    TextNode(
-                        id_=source_id,
-                        text=evidence.text,
-                        metadata=metadata,
-                        excluded_embed_metadata_keys=list(metadata),
-                        excluded_llm_metadata_keys=list(metadata),
-                    )
-                )
-                if len(nodes) > settings.chunk_limit:
-                    raise AppError("chunk_limit", "Document creates too many chunks.")
-    if not nodes:
-        raise AppError("empty_document", "Document contains no indexable content.")
-    return nodes
 
 
 class IndexStore:
@@ -236,10 +174,10 @@ class IndexStore:
             pass
 
     def retrieve(self, doc_id: str, question: str, embedding: list[float]) -> list[Evidence]:
+        started = time.monotonic()
         collection = self.client.get_collection(doc_id, embedding_function=None)
-        index = VectorStoreIndex.from_vector_store(
-            ChromaVectorStore(chroma_collection=collection), embed_model=self.embedder
-        )
+        vector_store = ChromaVectorStore(chroma_collection=collection)
+        index = VectorStoreIndex.from_vector_store(vector_store, embed_model=self.embedder)
         retriever = index.as_retriever(
             similarity_top_k=self.settings.top_k,
             filters=MetadataFilters(
@@ -247,18 +185,62 @@ class IndexStore:
             ),
         )
         results = retriever.retrieve(QueryBundle(query_str=question, embedding=embedding))
-        evidence, budget, images = [], 0, 0
-        for hit in results:
-            item = Evidence.model_validate_json(hit.node.metadata["source"])
-            cost = len(tokens(item.text))
-            if budget + cost > self.settings.evidence_tokens:
-                continue
+        evidence: list[Evidence] = []
+        budget, images = 0, 0
+        seen = set()
+
+        def include(item: Evidence):
+            nonlocal budget, images
+            cost = len(tokens(evidence_text(item)))
+            if item.source_id in seen or budget + cost > self.settings.evidence_tokens:
+                return
             if item.image_ref:
                 if images >= self.settings.answer_images:
-                    continue
+                    return
                 images += 1
             budget += cost
+            seen.add(item.source_id)
             evidence.append(item)
+
+        for hit in results:
+            item = Evidence.model_validate_json(hit.node.metadata["source"])
+            include(item)
+        seeds = list(evidence)
+        if self.settings.context_neighbors:
+            ids = list(
+                dict.fromkeys(
+                    ident
+                    for seed in seeds
+                    for ident in (seed.previous_id, seed.next_id)
+                    if ident and ident not in seen
+                )
+            )
+            neighbors = {}
+            if ids:
+                for node in vector_store.get_nodes(ids):
+                    if node.metadata.get("docwiki_document_id") == doc_id:
+                        item = Evidence.model_validate_json(node.metadata["source"])
+                        neighbors[item.source_id] = item
+            for seed in seeds:
+                for ident in (seed.previous_id, seed.next_id):
+                    neighbor = neighbors.get(ident) if ident else None
+                    if neighbor is not None:
+                        if (
+                            seed.group_id is not None
+                            and neighbor.group_id == seed.group_id
+                            and neighbor.kind == seed.kind
+                            and neighbor.location.page == seed.location.page
+                        ):
+                            include(neighbor)
+        event(
+            "retrieval_complete",
+            document_id=doc_id,
+            seed_count=len(seeds),
+            context_count=len(evidence) - len(seeds),
+            evidence_count=len(evidence),
+            evidence_tokens=budget,
+            latency_ms=round((time.monotonic() - started) * 1000),
+        )
         return evidence
 
     async def close(self):
